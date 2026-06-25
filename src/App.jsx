@@ -229,6 +229,12 @@ const INIT_CALENDAR_EVENTS = [
 
 const INIT_PAYROLL = [];
 
+const INIT_PROJECTS = [
+  {id:"P001",name:"Tuas Industrial Project",code:"TIS-2026",client:"JTC Corporation",startDate:"2026-01-01",endDate:"2027-12-31",status:"Active",supervisorId:"C006",hodId:"C001",members:["C004","C005"],description:"Industrial building construction at Tuas West"},
+];
+
+const INIT_COMPANY = {name:"CUSTERA O&M PTE LTD",uen:"202549889D",address:"Singapore"};
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 let _uid = 700;
 function uid(){return ++_uid;}
@@ -433,7 +439,8 @@ function EmpAttendance({empId,attendance,onClock,lang}){
 // ═══════════════════════════════════════════════════════════════════════════════
 function EmpLeave({empId,leaves,leaveTypes,onAdd,lang}){
   const [tab,setTab]=useState("apply");
-  const [form,setForm]=useState({type:leaveTypes[0]?.name||"Annual Leave",from:todayStr(),to:todayStr(),reason:""});
+  const [form,setForm]=useState({type:leaveTypes[0]?.name||"Annual Leave",from:todayStr(),to:todayStr(),reason:"",halfDay:false,halfDayPeriod:"AM"});
+  useEffect(()=>{if(leaveTypes.length&&!form.type)setForm(p=>({...p,type:leaveTypes[0].name}));},[leaveTypes]);
   const set=(k,v)=>setForm(p=>({...p,[k]:v}));
   const myLeaves=leaves.filter(l=>l.empId===empId).sort((a,b)=>b.submittedDate.localeCompare(a.submittedDate));
   const approved=myLeaves.filter(l=>l.status==="Approved");
@@ -441,10 +448,10 @@ function EmpLeave({empId,leaves,leaveTypes,onAdd,lang}){
   const mlUsed=approved.filter(l=>l.type==="Medical Leave").reduce((s,l)=>s+l.days,0);
   const alEnt=leaveTypes.find(x=>x.name==="Annual Leave")?.days||14;
   const mlEnt=leaveTypes.find(x=>x.name==="Medical Leave")?.days||14;
-  function calcDays(f,to){const ms=new Date(to)-new Date(f);return Math.max(1,Math.floor(ms/86400000)+1);}
+  function calcDays(f,to,halfDay){const ms=new Date(to)-new Date(f);const d=Math.max(1,Math.floor(ms/86400000)+1);return halfDay?0.5:d;}
   function submit(){
     if(!form.reason.trim())return;
-    onAdd({...form,empId,days:calcDays(form.from,form.to),status:"Pending Supervisor",supervisorComment:"",hrComment:"",submittedDate:todayStr()});
+    onAdd({...form,empId,days:calcDays(form.from,form.to,form.halfDay),status:"Pending Supervisor",supervisorComment:"",hrComment:"",submittedDate:todayStr()});
     alert("Leave request submitted for supervisor approval.");
   }
   const TABS=[{id:"apply",label:t(lang,"applyLeave")},{id:"balance",label:t(lang,"leaveBalance")},{id:"history",label:"History"}];
@@ -457,8 +464,16 @@ function EmpLeave({empId,leaves,leaveTypes,onAdd,lang}){
         <Inp label={t(lang,"from")} type="date" value={form.from} onChange={v=>set("from",v)}/>
         <Inp label={t(lang,"to")} type="date" value={form.to} onChange={v=>set("to",v)}/>
       </Grid>
-      <div style={{background:C.accentL,borderRadius:7,padding:"8px 12px",fontSize:13,color:C.accentT,fontWeight:600,margin:"10px 0"}}>
-        {t(lang,"days")}: {calcDays(form.from,form.to)}
+      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:13,margin:"10px 0 4px",cursor:"pointer"}}>
+        <input type="checkbox" checked={form.halfDay||false} onChange={e=>setForm(p=>({...p,halfDay:e.target.checked}))}/>
+        Half Day Leave
+      </label>
+      {form.halfDay&&<div style={{display:"flex",gap:8,marginBottom:8}}>
+        <label style={{display:"flex",gap:6,alignItems:"center",fontSize:13,cursor:"pointer"}}><input type="radio" checked={form.halfDayPeriod==="AM"} onChange={()=>setForm(p=>({...p,halfDayPeriod:"AM"}))}/>AM (Morning)</label>
+        <label style={{display:"flex",gap:6,alignItems:"center",fontSize:13,cursor:"pointer"}}><input type="radio" checked={form.halfDayPeriod==="PM"} onChange={()=>setForm(p=>({...p,halfDayPeriod:"PM"}))}/>PM (Afternoon)</label>
+      </div>}
+      <div style={{background:C.accentL,borderRadius:7,padding:"8px 12px",fontSize:13,color:C.accentT,fontWeight:600,margin:"4px 0 10px"}}>
+        {t(lang,"days")}: {form.halfDay?"0.5 (Half Day)":calcDays(form.from,form.to)}
       </div>
       <Inp label={t(lang,"reason")} value={form.reason} onChange={v=>set("reason",v)} rows={3}/>
       <div style={{fontSize:11,color:C.muted,marginTop:8}}>Approval: Employee → Supervisor → HR</div>
@@ -563,6 +578,7 @@ function EmpPayslip({empId,payroll,employees,lang}){
           <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginTop:4}}><span style={{color:C.muted}}>Skills Development Levy</span><span style={{fontWeight:600}}>{sgd(p.sdl)}</span></div>
         </div>
         <div style={{fontSize:11,color:C.muted,marginTop:12,textAlign:"center"}}>This is a computer-generated payslip. For queries, contact HR.</div>
+      <div style={{marginTop:12}}><Btn v="teal" onClick={()=>openPayslipPDF(emp,p,{name:"CUSTERA O&M PTE LTD",uen:"202549889D"})}>🖨️ Download PDF</Btn></div>
       </Card>}
     </div>}
   </div>;
@@ -1453,114 +1469,112 @@ function AdminCalendar({events,leaves,employees,onAdd,onEdit,onDelete,session,la
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN: PAYROLL — Fully Editable with OT / Reimbursement / Claims Breakdown
 // ═══════════════════════════════════════════════════════════════════════════════
-function PayrollEntryModal({emp,existing,month,claims,onSave,onClose}){
+
+function PayrollEntryModal({emp,existing,month,claims,onSave,onClose,company}){
   const approvedOT=claims.filter(c=>c.empId===emp.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
   const approvedReimb=claims.filter(c=>c.empId===emp.id&&c.type!=="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
   const [f,setF]=useState({
     basic:String((existing?.basic??Number(emp.basicSalary))||0),
-    allowance:String((existing?.allowance??Number(emp.allowance))||0),
+    phoneAllowance:String((existing?.phoneAllowance??Number(emp.phoneAllowance))||0),
+    housingAllowance:String((existing?.housingAllowance??Number(emp.housingAllowance))||0),
+    airfareAllowance:String((existing?.airfareAllowance??Number(emp.airfareAllowance))||0),
+    otherAllowance:String((existing?.otherAllowance??Number(emp.otherAllowance||emp.allowance))||0),
     otManual:String(existing?.otManual||0),
-    reimbManual:String(existing?.reimbManual||0),
     commission:String(existing?.commission||0),
-    otherEarnings:String(existing?.otherEarnings||0),
-    otherDeductions:String(existing?.otherDeductions||0),
+    leaveEncashment:String(existing?.leaveEncashment||0),
+    nplDeduction:String(existing?.nplDeduction||0),
+    incomeTax:String(existing?.incomeTax||0),
+    cdac:String(existing?.cdac||0),
+    otherDeductions:String((existing?.otherDeductions??0)||0),
     notes:existing?.notes||"",
   });
   const setFk=(k,v)=>setF(p=>({...p,[k]:v}));
   const n=k=>Number(f[k])||0;
+  const totalAllowance=n("phoneAllowance")+n("housingAllowance")+n("airfareAllowance")+n("otherAllowance");
   const totalOT=approvedOT+n("otManual");
-  const totalReimb=approvedReimb+n("reimbManual");
-  const gross=n("basic")+n("allowance")+totalOT+totalReimb+n("commission")+n("otherEarnings");
+  const gross=n("basic")+totalAllowance+totalOT+approvedReimb+n("commission")+n("leaveEncashment");
   const cpf=calcCPF(n("basic"),emp.nationality);
   const sdl=calcSDF(n("basic"));
-  const netPay=gross-cpf.employee-n("otherDeductions");
+  const totalDeductions=cpf.employee+n("nplDeduction")+n("incomeTax")+n("cdac")+n("otherDeductions");
+  const netPay=gross-totalDeductions;
+  function syncFromEmployee(){setF(p=>({...p,basic:String(Number(emp.basicSalary)||0),phoneAllowance:String(Number(emp.phoneAllowance)||0),housingAllowance:String(Number(emp.housingAllowance)||0),airfareAllowance:String(Number(emp.airfareAllowance)||0),otherAllowance:String(Number(emp.otherAllowance||emp.allowance)||0)}));} 
   function save(){
-    onSave({
-      id:existing?.id||uid(),empId:emp.id,month,
-      basic:n("basic"),allowance:n("allowance"),
-      otPay:totalOT,otManual:n("otManual"),otClaims:approvedOT,
-      reimbursement:totalReimb,reimbManual:n("reimbManual"),reimbClaims:approvedReimb,
-      commission:n("commission"),otherEarnings:n("otherEarnings"),
-      otherDeductions:n("otherDeductions"),notes:f.notes,
-      gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay,
-      status:existing?.status||"Draft",processedOn:todayStr(),publishedOn:existing?.publishedOn||"",
-    });
-    onClose();
+    const data={id:existing?.id||uid(),empId:emp.id,month,basic:n("basic"),phoneAllowance:n("phoneAllowance"),housingAllowance:n("housingAllowance"),airfareAllowance:n("airfareAllowance"),otherAllowance:n("otherAllowance"),allowance:totalAllowance,otPay:totalOT,otManual:n("otManual"),otClaims:approvedOT,reimbursement:approvedReimb,commission:n("commission"),leaveEncashment:n("leaveEncashment"),nplDeduction:n("nplDeduction"),incomeTax:n("incomeTax"),cdac:n("cdac"),otherDeductions:n("otherDeductions"),gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay,status:existing?.status||"Draft",processedOn:todayStr(),publishedOn:existing?.publishedOn||"",notes:f.notes};
+    onSave(data);onClose();
   }
-  const row=(label,value,color,bold)=><div style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid "+C.border}}>
-    <span style={{color:C.muted,fontSize:13}}>{label}</span><span style={{color:color||C.text,fontWeight:bold?800:600,fontSize:bold?15:13}}>{value}</span>
-  </div>;
-  return <Modal title={`Payroll Entry — ${emp.name}`} onClose={onClose} width={620}>
+  const row=(l,v,c,bold)=><div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid "+C.border,fontWeight:bold?800:500}}><span style={{color:C.muted,fontSize:12}}>{l}</span><span style={{color:c||C.text,fontSize:bold?14:12}}>{v}</span></div>;
+  return <Modal title={`Payroll — ${emp.name} (${month})`} onClose={onClose} width={700}>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-      {/* LEFT: Editable Inputs */}
-      <div>
-        <FormSection title="Earnings">
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <Inp label="Basic Salary (S$)" type="number" value={f.basic} onChange={v=>setFk("basic",v)}/>
-            <Inp label="Allowance (S$)" type="number" value={f.allowance} onChange={v=>setFk("allowance",v)}/>
-            <div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}>
-              <div style={{fontSize:11,color:C.teal,fontWeight:700}}>OT from Approved Claims (auto)</div>
-              <div style={{fontWeight:800,fontSize:15,color:C.teal}}>{sgd(approvedOT)}</div>
-            </div>
-            <Inp label="Additional OT (manual, S$)" type="number" value={f.otManual} onChange={v=>setFk("otManual",v)}/>
-            <div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}>
-              <div style={{fontSize:11,color:C.teal,fontWeight:700}}>Reimbursements from Claims (auto)</div>
-              <div style={{fontWeight:800,fontSize:15,color:C.teal}}>{sgd(approvedReimb)}</div>
-            </div>
-            <Inp label="Additional Reimbursement (S$)" type="number" value={f.reimbManual} onChange={v=>setFk("reimbManual",v)}/>
-            <Inp label="Commission (S$)" type="number" value={f.commission} onChange={v=>setFk("commission",v)}/>
-            <Inp label="Other Earnings (S$)" type="number" value={f.otherEarnings} onChange={v=>setFk("otherEarnings",v)}/>
+      <div style={{display:"flex",flexDirection:"column",gap:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase"}}>Earnings</div><Btn v="outline" sm onClick={syncFromEmployee}>↺ Sync from Employee</Btn></div>
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          <Inp label="Basic Salary (S$)" type="number" value={f.basic} onChange={v=>setFk("basic",v)}/>
+          <Inp label="Phone Allowance (S$)" type="number" value={f.phoneAllowance} onChange={v=>setFk("phoneAllowance",v)}/>
+          <Inp label="Housing Allowance (S$)" type="number" value={f.housingAllowance} onChange={v=>setFk("housingAllowance",v)}/>
+          <Inp label="Airfare Allowance (S$)" type="number" value={f.airfareAllowance} onChange={v=>setFk("airfareAllowance",v)}/>
+          <Inp label="Other Allowance (S$)" type="number" value={f.otherAllowance} onChange={v=>setFk("otherAllowance",v)}/>
+          <div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}>
+            <div style={{fontSize:10,color:C.teal,fontWeight:700}}>OT from Approved Claims (auto)</div>
+            <div style={{fontWeight:800,color:C.teal}}>{sgd(approvedOT)}</div>
           </div>
-        </FormSection>
-        <FormSection title="Deductions">
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{background:C.dangerL,borderRadius:7,padding:"8px 12px"}}>
-              <div style={{fontSize:11,color:C.dangerD,fontWeight:700}}>CPF Employee 20% (auto, capped S$1,200)</div>
-              <div style={{fontWeight:800,fontSize:15,color:C.danger}}>{sgd(cpf.employee)}</div>
-            </div>
-            <Inp label="Other Deductions (S$)" type="number" value={f.otherDeductions} onChange={v=>setFk("otherDeductions",v)} placeholder="e.g. loan repayment"/>
-          </div>
-        </FormSection>
-        <Inp label="Payroll Notes" value={f.notes} onChange={v=>setFk("notes",v)} placeholder="Optional notes..." rows={2}/>
-      </div>
-      {/* RIGHT: Live Preview */}
-      <div>
-        <FormSection title="Payslip Preview">
-          {row("Basic Salary",sgd(n("basic")))}
-          {row("Allowance",sgd(n("allowance")))}
-          {(totalOT>0)&&row("OT Pay",sgd(totalOT),C.teal)}
-          {(totalReimb>0)&&row("Reimbursements",sgd(totalReimb),C.teal)}
-          {n("commission")>0&&row("Commission",sgd(n("commission")))}
-          {n("otherEarnings")>0&&row("Other Earnings",sgd(n("otherEarnings")))}
-          {row("GROSS PAY",sgd(gross),C.text,true)}
-          <div style={{height:8}}/>
-          {row("CPF (Employee 20%)","-"+sgd(cpf.employee),C.danger)}
-          {n("otherDeductions")>0&&row("Other Deductions","-"+sgd(n("otherDeductions")),C.danger)}
-          <div style={{background:C.successL,borderRadius:8,padding:"12px 14px",margin:"10px 0"}}>
-            <div style={{fontSize:11,color:C.successD,fontWeight:700}}>NET PAY</div>
-            <div style={{fontSize:24,fontWeight:800,color:C.successD}}>{sgd(netPay)}</div>
-          </div>
-          <div style={{background:C.bg,borderRadius:8,padding:"10px 12px"}}>
-            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>EMPLOYER CONTRIBUTIONS</div>
-            {row("CPF Employer (17%)",sgd(cpf.employer),C.warning)}
-            {row("Skills Development Levy",sgd(sdl))}
-          </div>
-        </FormSection>
-        <div style={{background:C.bg,borderRadius:8,padding:"10px 12px",marginTop:10}}>
-          <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>EMPLOYEE INFO</div>
-          <div style={{fontSize:12}}>{emp.nationality} · {emp.workPass} · {emp.fin||"—"}</div>
-          <div style={{fontSize:11,color:C.muted,marginTop:2}}>CPF applies: {(emp.nationality==="Singaporean"||emp.nationality==="SPR")?"Yes":"No (EP/WP exempt)"}</div>
+          <Inp label="Additional OT / Manual OT (S$)" type="number" value={f.otManual} onChange={v=>setFk("otManual",v)}/>
+          {approvedReimb>0&&<div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:10,color:C.teal,fontWeight:700}}>Reimbursements from Claims (auto)</div><div style={{fontWeight:800,color:C.teal}}>{sgd(approvedReimb)}</div></div>}
+          <Inp label="Commission / Bonus (S$)" type="number" value={f.commission} onChange={v=>setFk("commission",v)}/>
+          <Inp label="Leave Encashment (S$)" type="number" value={f.leaveEncashment} onChange={v=>setFk("leaveEncashment",v)}/>
         </div>
+        <div style={{fontSize:11,fontWeight:700,color:C.danger,textTransform:"uppercase",margin:"12px 0 8px"}}>Deductions</div>
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          <div style={{background:C.dangerL,borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:10,color:C.dangerD,fontWeight:700}}>CPF Employee 20% (auto-calculated)</div><div style={{fontWeight:800,color:C.danger}}>{sgd(cpf.employee)}</div></div>
+          <Inp label="No Paid Leave Deduction (S$)" type="number" value={f.nplDeduction} onChange={v=>setFk("nplDeduction",v)}/>
+          <Inp label="Income Tax / IR8A (S$)" type="number" value={f.incomeTax} onChange={v=>setFk("incomeTax",v)}/>
+          <Inp label="CDAC / SINDA / MBMF (S$)" type="number" value={f.cdac} onChange={v=>setFk("cdac",v)}/>
+          <Inp label="Other Deductions (S$)" type="number" value={f.otherDeductions} onChange={v=>setFk("otherDeductions",v)}/>
+        </div>
+        <div style={{marginTop:10}}><Inp label="Notes" value={f.notes} onChange={v=>setFk("notes",v)} rows={2}/></div>
+      </div>
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:8}}>Live Payslip Preview</div>
+        <div style={{background:C.sidebar,color:"#fff",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
+          <div style={{fontWeight:800,fontSize:13}}>{emp.name}</div>
+          <div style={{fontSize:11,opacity:0.7}}>{emp.position} · {emp.id}</div>
+          <div style={{fontSize:11,opacity:0.7,marginTop:2}}>{month} · {emp.nationality}</div>
+        </div>
+        {row("Basic Salary",sgd(n("basic")))}
+        {row("Phone Allowance",sgd(n("phoneAllowance")))}
+        {row("Housing Allowance",sgd(n("housingAllowance")))}
+        {row("Airfare Allowance",sgd(n("airfareAllowance")))}
+        {n("otherAllowance")>0&&row("Other Allowance",sgd(n("otherAllowance")))}
+        {totalOT>0&&row("OT Pay",sgd(totalOT),C.teal)}
+        {approvedReimb>0&&row("Reimbursements",sgd(approvedReimb),C.teal)}
+        {n("commission")>0&&row("Commission/Bonus",sgd(n("commission")))}
+        {n("leaveEncashment")>0&&row("Leave Encashment",sgd(n("leaveEncashment")))}
+        {row("GROSS PAY",sgd(gross),C.text,true)}
+        <div style={{height:6}}/>
+        {row("CPF (Employee 20%)","-"+sgd(cpf.employee),C.danger)}
+        {n("nplDeduction")>0&&row("No Paid Leave","-"+sgd(n("nplDeduction")),C.danger)}
+        {n("incomeTax")>0&&row("Income Tax","-"+sgd(n("incomeTax")),C.danger)}
+        {n("cdac")>0&&row("CDAC/SINDA","-"+sgd(n("cdac")),C.danger)}
+        {n("otherDeductions")>0&&row("Other Deductions","-"+sgd(n("otherDeductions")),C.danger)}
+        <div style={{background:C.successL,borderRadius:10,padding:"14px",margin:"10px 0",textAlign:"center"}}>
+          <div style={{fontSize:11,color:C.successD,fontWeight:700}}>NET PAY</div>
+          <div style={{fontSize:26,fontWeight:900,color:C.successD}}>{sgd(netPay)}</div>
+        </div>
+        <div style={{background:C.bg,borderRadius:8,padding:"10px 12px"}}>
+          <div style={{fontSize:10,color:C.muted,fontWeight:700,marginBottom:6,textTransform:"uppercase"}}>Employer Contributions (not deducted)</div>
+          {row("CPF Employer (17%)",sgd(cpf.employer),C.warning)}
+          {row("Skills Development Levy",sgd(sdl))}
+        </div>
+        <div style={{marginTop:10,fontSize:11,color:C.muted}}>CPF applies: {(emp.nationality==="Singaporean"||emp.nationality==="SPR")?"Yes (SC/SPR)":"No — "+emp.workPass}</div>
       </div>
     </div>
     <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:16,paddingTop:14,borderTop:"1px solid "+C.border}}>
       <Btn v="ghost" onClick={onClose}>Cancel</Btn>
-      <Btn onClick={save}>{existing?"Update Payroll Entry":"Save Payroll Entry"}</Btn>
+      <Btn onClick={save}>{existing?"Update Entry":"Save Entry"}</Btn>
     </div>
   </Modal>;
 }
 
-function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,lang}){
+function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,company,lang}){
   const [month,setMonth]=useState(new Date().toISOString().slice(0,7));
   const [editEntry,setEditEntry]=useState(null);
   const [confirmId,setConfirmId]=useState(null);
@@ -1573,20 +1587,22 @@ function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,lan
   const totEmpCPF=processed.reduce((s,p)=>s+p.cpfEmployee,0);
   const totErCPF=processed.reduce((s,p)=>s+p.cpfEmployer,0);
   function processAll(){activeEmps.filter(e=>!processedIds.has(e.id)).forEach(e=>{
-    const basic=Number(e.basicSalary)||0;const allow=Number(e.allowance)||0;
+    const basic=Number(e.basicSalary)||0;
+    const phone=Number(e.phoneAllowance)||0,housing=Number(e.housingAllowance)||0,airfare=Number(e.airfareAllowance)||0,other=Number(e.otherAllowance||e.allowance)||0;
+    const totalAllow=phone+housing+airfare+other;
     const otPay=claims.filter(c=>c.empId===e.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
     const reimb=claims.filter(c=>c.empId===e.id&&c.type!=="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
-    const gross=basic+allow+otPay+reimb;const cpf=calcCPF(basic,e.nationality);const sdl=calcSDF(basic);
-    onProcess({id:uid(),empId:e.id,month,basic,allowance:allow,otPay,otClaims:otPay,reimbursement:reimb,reimbClaims:reimb,commission:0,otherEarnings:0,otherDeductions:0,gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay:gross-cpf.employee,status:"Draft",processedOn:todayStr(),publishedOn:"",notes:""});
+    const gross=basic+totalAllow+otPay+reimb;const cpf=calcCPF(basic,e.nationality);const sdl=calcSDF(basic);
+    onProcess({id:uid(),empId:e.id,month,basic,phoneAllowance:phone,housingAllowance:housing,airfareAllowance:airfare,otherAllowance:other,allowance:totalAllow,otPay,otClaims:otPay,reimbursement:reimb,commission:0,leaveEncashment:0,nplDeduction:0,incomeTax:0,cdac:0,otherDeductions:0,gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay:gross-cpf.employee,status:"Draft",processedOn:todayStr(),publishedOn:"",notes:""});
   });}
   function doExport(){exportMulti([
-    {n:"Payroll Summary",data:processed.map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,"Emp ID":p.empId,Name:e.name||"",Company:e.company||"",Nationality:e.nationality||"","Work Pass":e.workPass||"","FIN/NRIC":e.fin||"","Basic (S$)":p.basic,"Allowance (S$)":p.allowance,"OT (S$)":p.otPay||0,"Reimbursement (S$)":p.reimbursement||0,"Commission (S$)":p.commission||0,"Gross (S$)":p.gross,"CPF Ee (S$)":p.cpfEmployee,"CPF Er (S$)":p.cpfEmployer,"SDL (S$)":p.sdl,"Other Deductions":p.otherDeductions||0,"Net Pay (S$)":p.netPay,Status:p.status,Notes:p.notes||""}; })},
-    {n:"CPF Submission",data:processed.filter(p=>p.cpfEmployee>0).map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,Name:e.name||"","FIN/NRIC":e.fin||"","Ordinary Wages":p.basic,"Additional Wages":(p.allowance||0)+(p.otPay||0)+(p.commission||0),"Ee CPF":p.cpfEmployee,"Er CPF":p.cpfEmployer,"Total CPF":p.cpfEmployee+p.cpfEmployer};})},
+    {n:"Payroll",data:processed.map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,"Emp ID":p.empId,Name:e.name||"",Company:e.company||"","Work Pass":e.workPass||"","FIN/NRIC":e.fin||"","Basic (S$)":p.basic,"Phone Allow":p.phoneAllowance||0,"Housing Allow":p.housingAllowance||0,"Airfare Allow":p.airfareAllowance||0,"Other Allow":p.otherAllowance||0,"OT (S$)":p.otPay||0,"Reimb (S$)":p.reimbursement||0,"Commission":p.commission||0,"Leave Encash":p.leaveEncashment||0,"Gross (S$)":p.gross,"CPF Ee":p.cpfEmployee,"CPF Er":p.cpfEmployer,"SDL":p.sdl,"NPL Deduct":p.nplDeduction||0,"Income Tax":p.incomeTax||0,"CDAC":p.cdac||0,"Other Deduct":p.otherDeductions||0,"Net Pay (S$)":p.netPay,Status:p.status}; })},
+    {n:"CPF Submission",data:processed.filter(p=>p.cpfEmployee>0).map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,Name:e.name||"","FIN/NRIC":e.fin||"","Ordinary Wages":p.basic,"Additional Wages":(p.allowance||0)+(p.otPay||0),"Ee CPF":p.cpfEmployee,"Er CPF":p.cpfEmployer,"Total CPF":p.cpfEmployee+p.cpfEmployer};})},
   ],`payroll_${month}.xlsx`);}
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-      <div><h1 style={{fontSize:19,fontWeight:800,margin:0,color:C.text}}>{t(lang,"payroll")}</h1><input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{...IS,width:160,marginTop:6}}/></div>
-      <div style={{display:"flex",gap:8}}><Btn v="ghost" onClick={doExport}>{t(lang,"export")}</Btn><Btn v="warning" onClick={processAll} disabled={activeEmps.filter(e=>!processedIds.has(e.id)).length===0}>Process All (Default)</Btn></div>
+      <div><h1 style={{fontSize:19,fontWeight:800,margin:0,color:C.text}}>Payroll</h1><input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{...IS,width:160,marginTop:6}}/></div>
+      <div style={{display:"flex",gap:8}}><Btn v="ghost" onClick={doExport}>Export Excel</Btn><Btn v="warning" onClick={processAll} disabled={activeEmps.filter(e=>!processedIds.has(e.id)).length===0}>Process All (Default)</Btn></div>
     </div>
     <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
       <StatCard label="Total Gross" value={sgd(totGross)} icon="$" color={C.accent}/>
@@ -1594,30 +1610,34 @@ function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,lan
       <StatCard label="CPF (Employee)" value={sgd(totEmpCPF)} icon="E" color={C.purple}/>
       <StatCard label="CPF (Employer)" value={sgd(totErCPF)} icon="R" color={C.warning}/>
     </div>
-    <TTable cols={["Employee","Nationality","Basic","OT","Reimb","Gross","CPF Ee","Net Pay","Status","Actions"]}
-      rows={activeEmps.map(e=>{const p=processed.find(x=>x.empId===e.id);const basic=Number(e.basicSalary)||0;const allow=Number(e.allowance)||0;const cpf=calcCPF(basic,e.nationality);
+    <TTable cols={["Employee","Basic","Allowances","OT","Gross","CPF Ee","Net Pay","Status","Actions"]}
+      rows={activeEmps.map(e=>{const p=processed.find(x=>x.empId===e.id);
+      const basic=Number(e.basicSalary)||0;
+      const totalAllow=(Number(e.phoneAllowance)||0)+(Number(e.housingAllowance)||0)+(Number(e.airfareAllowance)||0)+(Number(e.otherAllowance||e.allowance)||0);
+      const cpf=calcCPF(basic,e.nationality);
       return<TR key={e.id}>
-        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
-        <TD style={{fontSize:11}}>{e.nationality}</TD>
-        <TD style={{fontSize:12}}>{sgd(p?.basic||basic+allow)}</TD>
+        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id} · {e.nationality}</div></div></div></TD>
+        <TD style={{fontSize:12}}>{sgd(p?.basic||basic)}</TD>
+        <TD style={{fontSize:12,color:C.purple}}>{sgd(p?.allowance||totalAllow)}</TD>
         <TD style={{fontSize:12,color:C.teal}}>{sgd(p?.otPay||0)}</TD>
-        <TD style={{fontSize:12,color:C.teal}}>{sgd(p?.reimbursement||0)}</TD>
-        <TD style={{fontWeight:600}}>{sgd(p?.gross||basic+allow)}</TD>
+        <TD style={{fontWeight:600}}>{sgd(p?.gross||basic+totalAllow)}</TD>
         <TD style={{color:C.danger,fontSize:12}}>{sgd(p?.cpfEmployee||cpf.employee)}</TD>
-        <TD style={{fontWeight:700,color:C.success}}>{sgd(p?.netPay||(basic+allow-cpf.employee))}</TD>
+        <TD style={{fontWeight:700,color:C.success}}>{sgd(p?.netPay||(basic+totalAllow-cpf.employee))}</TD>
         <TD><Badge s={p?.status||"Draft"}/></TD>
-        <TD><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        <TD><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
           <Btn v={p?"outline":"primary"} sm onClick={()=>setEditEntry({emp:e,existing:p})}>{p?"Edit":"Process"}</Btn>
           {p&&<Btn v="ghost" sm onClick={()=>setShowSlip({emp:e,p})}>Slip</Btn>}
           {p&&p.status==="Draft"&&<Btn v="success" sm onClick={()=>onPublish(p.id)}>Publish</Btn>}
+          {p&&p.status==="Published"&&<Btn v="teal" sm onClick={()=>openPayslipPDF(e,p,company||{})}>PDF</Btn>}
           {p&&<Btn v="danger" sm onClick={()=>setConfirmId(p.id)}>Del</Btn>}
         </div></TD>
       </TR>;})}/>
-    {editEntry&&<PayrollEntryModal emp={editEntry.emp} existing={editEntry.existing} month={month} claims={claims}
-      onSave={d=>{if(editEntry.existing){onDelete(editEntry.existing.id);onProcess({...d,id:uid()});}else{onProcess(d);}setEditEntry(null);}}
+    {editEntry&&<PayrollEntryModal emp={editEntry.emp} existing={editEntry.existing} month={month} claims={claims} company={company||{}}
+      onSave={d=>{if(editEntry.existing)onDelete(editEntry.existing.id);onProcess({...d,id:uid()});setEditEntry(null);}}
       onClose={()=>setEditEntry(null)}/>}
-    {showSlip&&<Modal title="Payslip Preview" onClose={()=>setShowSlip(null)} width={440}>
-      <EmpPayslip empId={showSlip.emp.id} payroll={[{...showSlip.p,status:"Published"}]} employees={employees} lang={lang}/>
+    {showSlip&&<Modal title="Payslip Preview" onClose={()=>setShowSlip(null)} width={460}>
+      <EmpPayslip empId={showSlip.emp.id} payroll={[{...showSlip.p,status:"Published"}]} employees={employees} lang={lang} company={company}/>
+      <div style={{marginTop:12}}><Btn v="teal" onClick={()=>openPayslipPDF(showSlip.emp,showSlip.p,company||{})}>🖨️ Download PDF (Custera Template)</Btn></div>
     </Modal>}
     {confirmId&&<Confirm msg="Delete payroll record?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
@@ -1745,7 +1765,7 @@ function Login({users,onLogin,lang,setLang}){
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
 const EMP_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payslip",l:"payslip",icon:"$"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"K"},{id:"shift",l:"shift",icon:"S"}];
-const ADMIN_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"employees",l:"employees",icon:"E"},{id:"users",l:"settings",icon:"U"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payroll",l:"payroll",icon:"$"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"K"},{id:"shift",l:"shift",icon:"S"}];
+const ADMIN_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"employees",l:"employees",icon:"E"},{id:"projects",l:"Projects",icon:"J"},{id:"users",l:"settings",icon:"U"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payroll",l:"payroll",icon:"$"},{id:"tracker",l:"Tracker",icon:"K"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"C"},{id:"shift",l:"shift",icon:"S"}];
 
 
 export default function App(){
@@ -1754,6 +1774,8 @@ export default function App(){
   const [page,setPage]=useState("dashboard");
   const [toast,setToast]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [projects,setProjects]=useState(INIT_PROJECTS);
+  const [company,setCompany]=useState(INIT_COMPANY);
 
   // ── Data states (populated by Firestore real-time listeners) ──────────────
   const [employees,setEmployees]=useState([]);
@@ -1807,6 +1829,8 @@ export default function App(){
           seedCol(INIT_ATTENDANCE,'attendance');
           seedCol(INIT_SHIFTS,'shifts');
           seedCol(INIT_CALENDAR_EVENTS,'calEvents');
+          batch.set(doc(collection(db,'projects')),{...INIT_PROJECTS[0],id:""});
+          batch.set(doc(db,'company','settings'),{...INIT_COMPANY,id:'settings'});
           await batch.commit();
           console.log('Custera.HR: Database seeded successfully.');
         }
@@ -1830,6 +1854,8 @@ export default function App(){
       onSnapshot(collection(db,'attendance'),s=>setAttendance(snap2arr(s))),
       onSnapshot(collection(db,'shifts'),s=>setShifts(snap2arr(s))),
       onSnapshot(collection(db,'calEvents'),s=>setCalEvents(snap2arr(s))),
+      onSnapshot(collection(db,'projects'),s=>{const d=snap2arr(s);if(d.length)setProjects(d);}),
+      onSnapshot(collection(db,'company'),s=>{const d=snap2arr(s);if(d.length)setCompany(d[0]);}),
     ];
     return()=>subs.forEach(u=>u());
   },[]);
@@ -1954,6 +1980,9 @@ export default function App(){
 
   // ── CALENDAR ──────────────────────────────────────────────────────────────
   function addCalEvent(d){fsAddId('calEvents',d);toast_("Event added.");}
+  function addProject(d){fsAddId('projects',{...d,id:""}).then(()=>toast_("Project added."));}
+  function editProject(id,d){fsUp('projects',id,d);toast_("Project updated.");}
+  function delProject(id){fsDel('projects',id);toast_("Deleted.","error");}
   function editCalEvent(id,d){fsUp('calEvents',id,d);toast_("Updated.");}
   function delCalEvent(id){fsDel('calEvents',id);toast_("Deleted.","error");}
 
@@ -1983,14 +2012,16 @@ export default function App(){
       case "attendance":return <AdminAttendance attendance={attendance} employees={employees} onAdd={clockAction} onEdit={(id,d)=>{const ex=attendance.find(a=>a.id===id);if(ex)clockAction({...ex,...d,id});}} onDelete={id=>{fsDel("attendance",id);toast_("Deleted.","error");}} lang={lang}/>;
       case "leaves":return <AdminLeave leaves={leaves} employees={employees} leaveTypes={leaveTypes} users={users} onAction={leaveAction} onAdd={addLeave} onDelete={delLeave} onAddType={addLT} onEditType={editLT} onDeleteType={delLT} session={session} lang={lang}/>;
       case "claims":return <AdminClaims claims={claims} employees={employees} users={users} session={session} onAction={claimAction} onDelete={delClaim} lang={lang}/>;
-      case "payroll":return <AdminPayroll employees={employees} payroll={payroll} claims={claims} onProcess={processPayroll} onDelete={delPayroll} onPublish={publishPayslip} lang={lang}/>;
+      case "payroll":return <AdminPayroll employees={employees} payroll={payroll} claims={claims} onProcess={processPayroll} onDelete={delPayroll} onPublish={publishPayslip} company={company} lang={lang}/>;
       case "memo":return <AdminMemo memos={memos} onAdd={addMemo} onEdit={editMemo} onDelete={delMemo} session={session} lang={lang}/>;
       case "policy":return <AdminPolicy policies={policies} onAdd={addPolicy} onEdit={editPolicy} onDelete={delPolicy} session={session} lang={lang}/>;
       case "training":return <AdminTraining trainings={trainings} employees={employees} onAdd={addTraining} onEdit={editTraining} onDelete={delTraining} session={session} lang={lang}/>;
       case "feedback":return <AdminFeedback feedbacks={feedbacks} sections={feedbackSections} employees={employees} onReply={replyFeedback} onDeleteFeedback={id=>fsDel('feedbacks',id)} onAddSection={addFeedbackSection} onEditSection={editFeedbackSection} onDeleteSection={delFeedbackSection} lang={lang}/>;
       case "appraisal":return <AdminAppraisal forms={appraisalForms} submissions={appraisalSubs} employees={employees} onAddForm={addAppraisalForm} onEditForm={editAppraisalForm} onDeleteForm={delAppraisalForm} onSaveSubmission={saveAppraisalSub} session={session} lang={lang}/>;
       case "calendar":return <AdminCalendar events={calEvents} leaves={leaves} employees={employees} onAdd={addCalEvent} onEdit={editCalEvent} onDelete={delCalEvent} session={session} lang={lang}/>;
-      case "shift":return <AdminShift shifts={shifts} employees={employees} onAdd={addShift} onEdit={editShift} onDelete={delShift} lang={lang}/>;
+      case "shift":return <AdminShift shifts={shifts} employees={employees} onAdd={addShift} onEdit={editShift} onDelete={delShift} lang={lang}/>
+      case "projects":return <AdminProjects projects={projects} employees={employees} onAdd={addProject} onEdit={editProject} onDelete={delProject} lang={lang}/>
+      case "tracker":return <AdminTracker employees={employees} leaves={leaves} leaveTypes={leaveTypes} lang={lang}/>;
       default:return null;
     }
   }
@@ -2058,7 +2089,7 @@ function EmpList({employees,leaves,onAdd,onEdit,onDelete,lang}){
       </TR>)}/>
     {showAdd&&<Modal title={editE?"Edit Employee":"Add Employee"} onClose={()=>setShowAdd(false)} width={640}>
       <Grid cols={2}>
-        {[["Employee ID","id","text"],["Full Name","name","text"],["FIN/NRIC","fin","text"],["Department","department","text"],["Company","company","text"],["Position","position","text"],["Date Joined","dateJoined","date"],["Date of Birth","dob","date"],["Nationality","nationality","text"],["Work Pass","workPass","text"],["Mobile","mobile","text"],["Basic Salary","basicSalary","number"],["Allowance","allowance","number"],["Status","status","text"]].map(([l,k,tp])=><Inp key={k} label={l} type={tp} value={f[k]||""} onChange={v=>setFk(k,v)} readOnly={k==="id"&&!!editE}/>)}
+        {[["Employee ID","id","text"],["Full Name","name","text"],["FIN/NRIC","fin","text"],["Department","department","text"],["Company","company","text"],["Position","position","text"],["Date Joined","dateJoined","date"],["Date of Birth","dob","date"],["Nationality","nationality","text"],["Work Pass","workPass","text"],["Mobile","mobile","text"],["Basic Salary","basicSalary","number"],["Allowance","allowance","number"],["Status","status","text"],["Work Pass Issue Date","workPassIssueDate","date"],["Work Pass Expiry Date","workPassExpiryDate","date"],["Probation End Date","probationEndDate","date"],["Passport Number","passportNumber","text"],["Passport Issue Date","passportIssueDate","date"],["Passport Expiry Date","passportExpiryDate","date"],["Qualification","qualification","text"],["Phone Allowance (S$)","phoneAllowance","number"],["Housing Allowance (S$)","housingAllowance","number"],["Airfare Allowance (S$)","airfareAllowance","number"],["Other Allowance (S$)","otherAllowance","number"]].map(([l,k,tp])=><Inp key={k} label={l} type={tp} value={f[k]||""} onChange={v=>setFk(k,v)} readOnly={k==="id"&&!!editE}/>)}
       </Grid>
       <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:12}}><Btn v="ghost" onClick={()=>setShowAdd(false)}>Cancel</Btn><Btn onClick={save}>Save</Btn></div>
     </Modal>}
