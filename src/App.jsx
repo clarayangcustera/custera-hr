@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDocs, writeBatch } from "firebase/firestore";
+
+const FB_CONFIG={apiKey:"AIzaSyAZ4tG7FDPHVN9O4HC5VEIjTqoJheMH6b8",authDomain:"custera-hr.firebaseapp.com",projectId:"custera-hr",storageBucket:"custera-hr.firebasestorage.app",messagingSenderId:"459279090099",appId:"1:459279090099:web:6e85fb5c6d4236efd58bc6"};
+const fbApp=initializeApp(FB_CONFIG);
+const db=getFirestore(fbApp);
 import * as XLSX from "xlsx";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -863,148 +869,291 @@ function UserMgmt({users,employees,onAdd,onEdit,onDelete,onResetPw,lang}){
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN: ATTENDANCE REVIEW
 // ═══════════════════════════════════════════════════════════════════════════════
-function AdminAttendance({attendance,employees,lang}){
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: ATTENDANCE — Add / Edit / Delete
+// ═══════════════════════════════════════════════════════════════════════════════
+function AdminAttendance({attendance,employees,onAdd,onEdit,onDelete,lang}){
   const [dateF,setDateF]=useState(todayStr());
   const [search,setSearch]=useState("");
-  const recs=attendance.filter(a=>(!dateF||a.date===dateF)&&(!search||employees.find(e=>e.id===a.empId)?.name.toLowerCase().includes(search.toLowerCase())));
-  const present=recs.filter(r=>r.status==="Present").length;
-  const absent=employees.length-present;
-  function doExport(){exportXLS(recs.map(a=>{const e=employees.find(x=>x.id===a.empId)||{};return{Date:fmtDate(a.date),"Employee ID":a.empId,Name:e.name||"",Site:a.site||"","Clock In":a.clockIn,"Clock Out":a.clockOut,"Hours Worked":a.hoursWorked,GPS:`${a.lat||""},${a.lng||""}`,Status:a.status};}),"Attendance",`attendance_${dateF||"all"}.xlsx`);}
+  const [showForm,setShowForm]=useState(false);
+  const [editRec,setEditRec]=useState(null);
+  const [confirmId,setConfirmId]=useState(null);
+  const EF={empId:"",date:todayStr(),clockIn:"07:00",clockOut:"17:00",site:"",status:"Present",lat:"",lng:""};
+  const [f,setF]=useState(EF);
+  const setFk=(k,v)=>setF(p=>({...p,[k]:v}));
+  const recs=attendance.filter(a=>(!dateF||a.date===dateF)&&(!search||(employees.find(e=>e.id===a.empId)?.name||"").toLowerCase().includes(search.toLowerCase())));
+  function calcHrs(ci,co){if(!ci||!co)return 0;const[h1,m1]=ci.split(":").map(Number);const[h2,m2]=co.split(":").map(Number);return Math.round(((h2*60+m2)-(h1*60+m1))/60*100)/100;}
+  function openEdit(r){setEditRec(r);setF({empId:r.empId,date:r.date,clockIn:r.clockIn||"",clockOut:r.clockOut||"",site:r.site||"",status:r.status||"Present",lat:r.lat||"",lng:r.lng||""});setShowForm(true);}
+  function openNew(){setEditRec(null);setF(EF);setShowForm(true);}
+  function save(){const hrs=calcHrs(f.clockIn,f.clockOut);if(editRec){onEdit(editRec.id,{...f,hoursWorked:hrs,id:editRec.id});}else{onAdd({...f,hoursWorked:hrs});}setShowForm(false);}
+  function liveHrs(){return Math.max(0,calcHrs(f.clockIn,f.clockOut));}
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <PageTitle title={t(lang,"attendance")} actions={[<Btn v="ghost" onClick={doExport}>{t(lang,"export")}</Btn>]}/>
-    <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-      <StatCard label="Present" value={present} icon="✓" color={C.success}/>
-      <StatCard label="Absent/Unknown" value={absent} icon="✕" color={C.danger}/>
-      <StatCard label="Records" value={recs.length} icon="R" color={C.accent}/>
+    <PageTitle title={t(lang,"attendance")} actions={[
+      <Btn onClick={openNew}>+ Add Record</Btn>,
+      <Btn v="ghost" onClick={()=>exportXLS(recs.map(a=>{const e=employees.find(x=>x.id===a.empId)||{};return{Date:fmtDate(a.date),"Emp ID":a.empId,Name:e.name||"",Site:a.site||"","Clock In":a.clockIn,"Clock Out":a.clockOut,"Hours":a.hoursWorked,GPS:`${a.lat||""},${a.lng||""}`,Status:a.status};}),"Attendance",`attendance_${dateF||"all"}.xlsx`)}>{t(lang,"export")}</Btn>
+    ]}/>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      <StatCard label="Present" value={recs.filter(r=>r.status==="Present").length} icon="✓" color={C.success}/>
+      <StatCard label="Absent" value={recs.filter(r=>r.status==="Absent").length} icon="✕" color={C.danger}/>
+      <StatCard label="Total Records" value={recs.length} icon="R" color={C.accent}/>
     </div>
     <FilterBar>
       <SearchInp value={search} onChange={setSearch} placeholder="Search employee..."/>
       <input type="date" value={dateF} onChange={e=>setDateF(e.target.value)} style={{...IS,width:160}}/>
       <Btn v="ghost" sm onClick={()=>setDateF("")}>All Dates</Btn>
     </FilterBar>
-    <TTable cols={["Employee","Date","Site","Clock In","Clock Out","Hours","GPS","Status"]}
-      rows={recs.map(a=>{const emp=employees.find(e=>e.id===a.empId);return <TR key={a.id}>
+    <TTable cols={["Employee","Date","Site","Clock In","Clock Out","Hours","GPS","Status","Actions"]}
+      rows={recs.map(a=>{const emp=employees.find(e=>e.id===a.empId);return<TR key={a.id}>
         <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={26}/><span style={{fontWeight:600,fontSize:12}}>{emp?.name||a.empId}</span></div></TD>
         <TD style={{fontSize:12}}>{fmtDate(a.date)}</TD>
         <TD style={{fontSize:12,color:C.muted}}>{a.site||"—"}</TD>
-        <TD style={{fontWeight:600}}>{a.clockIn||"—"}</TD><TD>{a.clockOut||"—"}</TD>
-        <TD style={{fontWeight:600,color:C.teal}}>{a.hoursWorked?a.hoursWorked+"h":"—"}</TD>
-        <TD style={{fontSize:11,color:C.muted}}>{a.lat?`${a.lat},${a.lng}`:"—"}</TD>
+        <TD style={{fontWeight:600,color:C.success}}>{a.clockIn||"—"}</TD>
+        <TD style={{fontWeight:600,color:C.danger}}>{a.clockOut||"—"}</TD>
+        <TD style={{fontWeight:700,color:C.teal}}>{a.hoursWorked?a.hoursWorked+"h":"—"}</TD>
+        <TD style={{fontSize:11,color:C.muted}}>{a.lat?`${Number(a.lat).toFixed(4)},${Number(a.lng).toFixed(4)}`:"—"}</TD>
         <TD><Badge s={a.status}/></TD>
+        <TD><div style={{display:"flex",gap:4}}>
+          <Btn v="outline" sm onClick={()=>openEdit(a)}>Edit</Btn>
+          <Btn v="danger" sm onClick={()=>setConfirmId(a.id)}>Del</Btn>
+        </div></TD>
       </TR>;})}/>
+    {showForm&&<Modal title={editRec?"Edit Attendance Record":"Add Attendance Record"} onClose={()=>setShowForm(false)} width={520}>
+      <Grid>
+        <Sel label="Employee" value={f.empId} onChange={v=>setFk("empId",v)} required options={employees.map(e=>({v:e.id,l:`${e.id} - ${e.name}`}))}/>
+        <Inp label="Date" type="date" value={f.date} onChange={v=>setFk("date",v)}/>
+        <Inp label="Clock In" type="time" value={f.clockIn} onChange={v=>setFk("clockIn",v)}/>
+        <Inp label="Clock Out" type="time" value={f.clockOut} onChange={v=>setFk("clockOut",v)}/>
+        <Inp label="Work Site" value={f.site} onChange={v=>setFk("site",v)} placeholder="e.g. Tuas Site"/>
+        <Sel label="Status" value={f.status} onChange={v=>setFk("status",v)} options={["Present","Absent","Half Day","On Leave"]}/>
+        <Inp label="GPS Latitude" value={f.lat} onChange={v=>setFk("lat",v)} placeholder="e.g. 1.3521"/>
+        <Inp label="GPS Longitude" value={f.lng} onChange={v=>setFk("lng",v)} placeholder="e.g. 103.8198"/>
+      </Grid>
+      {f.clockIn&&f.clockOut&&<div style={{background:C.accentL,borderRadius:7,padding:"8px 12px",fontSize:13,color:C.accentT,fontWeight:600,marginTop:10}}>
+        Calculated hours worked: {liveHrs()}h
+      </div>}
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:14}}>
+        <Btn v="ghost" onClick={()=>setShowForm(false)}>Cancel</Btn>
+        <Btn onClick={save}>Save</Btn>
+      </div>
+    </Modal>}
+    {confirmId&&<Confirm msg="Delete this attendance record?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN: LEAVE MANAGEMENT (3-level)
+// APPROVAL CHAIN PROGRESS (3-level visual)
+// ═══════════════════════════════════════════════════════════════════════════════
+function ApprovalProgress({status,supervisorComment,hrComment}){
+  const steps=[
+    {label:"Submitted",done:true,color:C.success},
+    {label:"Supervisor",done:status!=="Pending Supervisor",active:status==="Pending Supervisor",color:status==="Pending Supervisor"?C.warning:status==="Rejected"&&supervisorComment?C.danger:C.success},
+    {label:"HR Admin",done:status==="Approved"||status==="Rejected",active:status==="Pending HR",color:status==="Pending HR"?C.warning:status==="Approved"?C.success:status==="Rejected"&&hrComment?C.danger:C.muted},
+    {label:status==="Approved"?"Approved":status==="Rejected"?"Rejected":"Final",done:status==="Approved"||status==="Rejected",color:status==="Approved"?C.success:status==="Rejected"?C.danger:C.muted},
+  ];
+  return <div style={{display:"flex",alignItems:"center",gap:0}}>
+    {steps.map((s,i)=><React.Fragment key={i}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+        <div style={{width:22,height:22,borderRadius:"50%",background:s.done||s.active?s.color:C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>{s.done&&!s.active?"✓":i+1}</div>
+        <div style={{fontSize:9,fontWeight:600,color:s.done||s.active?s.color:C.muted,whiteSpace:"nowrap"}}>{s.label}</div>
+      </div>
+      {i<3&&<div style={{width:20,height:2,background:steps[i+1].done?C.success:C.border,margin:"0 2px",marginBottom:12,flexShrink:0}}/>}
+    </React.Fragment>)}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: LEAVE MANAGEMENT — 3-Level Approval
 // ═══════════════════════════════════════════════════════════════════════════════
 function AdminLeave({leaves,employees,leaveTypes,users,onAction,onAdd,onDelete,onAddType,onEditType,onDeleteType,session,lang}){
-  const [tab,setTab]=useState("pending");
-  const [filter,setFilter]=useState("Pending Supervisor");
+  const [tab,setTab]=useState("requests");
+  const [filter,setFilter]=useState("All");
+  const [detail,setDetail]=useState(null);
+  const [rejectId,setRejectId]=useState(null);
+  const [rejectComment,setRejectComment]=useState("");
   const [confirmId,setConfirmId]=useState(null);
-  const isSupervisor=session.role==="supervisor";
-  const myTeamIds=isSupervisor?users.filter(u=>u.reportingOfficerId===session.id).map(u=>u.empId):null;
-  const visible=isSupervisor?leaves.filter(l=>myTeamIds.includes(l.empId)):leaves;
+  const [showApply,setShowApply]=useState(false);
+  const [applyForm,setApplyForm]=useState({empId:"",type:leaveTypes[0]?.name||"Annual Leave",from:todayStr(),to:todayStr(),reason:""});
+  const isSup=session.role==="supervisor";
+  const isHR=session.role==="admin"||session.role==="superadmin";
+  const myTeamIds=isSup?users.filter(u=>u.reportingOfficerId===session.id).map(u=>u.empId):null;
+  const visible=isSup?leaves.filter(l=>myTeamIds.includes(l.empId)):leaves;
   const filtered=filter==="All"?visible:visible.filter(l=>l.status===filter);
-  function approve(l){
-    if(isSupervisor&&l.status==="Pending Supervisor"){onAction(l.id,"Pending HR",session.name,"");}
-    else if(!isSupervisor&&l.status==="Pending HR"){onAction(l.id,"Approved",session.name,"");}
+
+  const pendingSup=visible.filter(l=>l.status==="Pending Supervisor").length;
+  const pendingHR=visible.filter(l=>l.status==="Pending HR").length;
+
+  function canAct(l){
+    if(isSup&&l.status==="Pending Supervisor")return true;
+    if(isHR&&l.status==="Pending HR")return true;
+    if(session.role==="superadmin")return l.status==="Pending Supervisor"||l.status==="Pending HR";
+    return false;
   }
-  function reject(l,comment){onAction(l.id,"Rejected",session.name,comment||"");}
-  const STATUSES=["All","Pending Supervisor","Pending HR","Approved","Rejected"];
-  const TABS=[{id:"pending",label:"Leave Records"},{id:"types",label:"Leave Types"}];
+  function approve(l){
+    if(isSup&&l.status==="Pending Supervisor")onAction(l.id,"Pending HR",session.name,"");
+    else if(isHR&&l.status==="Pending HR")onAction(l.id,"Approved",session.name,"");
+    else if(session.role==="superadmin"){
+      if(l.status==="Pending Supervisor")onAction(l.id,"Pending HR",session.name,"");
+      else onAction(l.id,"Approved",session.name,"");
+    }
+    setDetail(null);
+  }
+  function submitReject(){onAction(rejectId,"Rejected",session.name,rejectComment);setRejectId(null);setRejectComment("");setDetail(null);}
+  function calcDays(f,to){return Math.max(1,Math.floor((new Date(to)-new Date(f))/86400000)+1);}
+  function submitApply(){if(!applyForm.empId||!applyForm.reason.trim())return;onAdd({...applyForm,days:calcDays(applyForm.from,applyForm.to),status:"Pending Supervisor",supervisorComment:"",hrComment:"",submittedDate:todayStr()});setShowApply(false);}
+
+  const STATUS_FILTERS=["All","Pending Supervisor","Pending HR","Approved","Rejected"];
+  const TABS=[{id:"requests",label:"Leave Requests"},{id:"types",label:"Leave Types"}];
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <PageTitle title={t(lang,"leaves")} actions={[<Btn onClick={()=>{}} v="outline">+ Apply</Btn>]}/>
+    <PageTitle title={t(lang,"leaves")} actions={[
+      <Btn onClick={()=>setShowApply(true)}>+ Apply Leave</Btn>,
+      <Btn v="ghost" onClick={()=>exportXLS(filtered.map(l=>{const e=employees.find(x=>x.id===l.empId)||{};return{"Emp ID":l.empId,Name:e.name||"",Type:l.type,From:fmtDate(l.from),To:fmtDate(l.to),Days:l.days,Reason:l.reason,Status:l.status,"Sup Comment":l.supervisorComment||"","HR Comment":l.hrComment||""};}), "Leaves",`leaves_${todayStr()}.xlsx`)}>{t(lang,"export")}</Btn>
+    ]}/>
+
+    {/* 3-Level Approval Summary */}
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      <StatCard label="Pending Supervisor" value={pendingSup} icon="1" color={C.warning} sub="Step 1 of 3"/>
+      <StatCard label="Pending HR" value={pendingHR} icon="2" color={C.purple} sub="Step 2 of 3"/>
+      <StatCard label="Approved" value={visible.filter(l=>l.status==="Approved").length} icon="✓" color={C.success}/>
+      <StatCard label="Rejected" value={visible.filter(l=>l.status==="Rejected").length} icon="✕" color={C.danger}/>
+    </div>
+
+    {/* Approval role indicator */}
+    <div style={{background:isSup?C.warningL:C.accentL,borderRadius:8,padding:"10px 14px",fontSize:13,fontWeight:600,color:isSup?C.warningD:C.accentT}}>
+      {isSup?"Your role: Supervisor — You approve Step 1 (Pending Supervisor)":"Your role: HR Admin — You approve Step 2 (Pending HR)"}
+    </div>
+
     <TabBar tabs={TABS} active={tab} onChange={setTab}/>
-    {tab==="pending"&&<>
-      <FilterBar>{STATUSES.map(s=><StatusPill key={s} s={s} active={filter===s} onClick={setFilter}/>)}</FilterBar>
-      <TTable cols={["Employee","Type","From","To","Days","Reason","Status","Submitted","Actions"]}
-        rows={filtered.map(l=>{const emp=employees.find(e=>e.id===l.empId);return <TR key={l.id}>
-          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={24}/><span style={{fontWeight:600,fontSize:12}}>{emp?.name||l.empId}</span></div></TD>
+
+    {tab==="requests"&&<>
+      <FilterBar>{STATUS_FILTERS.map(s=><StatusPill key={s} s={s} active={filter===s} onClick={setFilter}/>)}</FilterBar>
+      <TTable cols={["Employee","Type","From","To","Days","Approval Progress","Status","Actions"]}
+        rows={filtered.sort((a,b)=>{const ord={"Pending Supervisor":0,"Pending HR":1,"Approved":2,"Rejected":3};return(ord[a.status]||4)-(ord[b.status]||4);}).map(l=>{const emp=employees.find(e=>e.id===l.empId);return<TR key={l.id} onClick={()=>setDetail(l)}>
+          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{emp?.name||l.empId}</div><div style={{fontSize:10,color:C.muted}}>{fmtDate(l.submittedDate)}</div></div></div></TD>
           <TD style={{fontSize:12}}>{l.type}</TD>
           <TD style={{fontSize:12,whiteSpace:"nowrap"}}>{fmtDate(l.from)}</TD>
           <TD style={{fontSize:12,whiteSpace:"nowrap"}}>{fmtDate(l.to)}</TD>
-          <TD style={{fontWeight:700}}>{l.days}</TD>
-          <TD style={{fontSize:12,color:C.muted,maxWidth:120}}><span title={l.reason}>{l.reason.slice(0,25)}{l.reason.length>25?"...":""}</span></TD>
+          <TD style={{fontWeight:700,textAlign:"center"}}>{l.days}</TD>
+          <TD><ApprovalProgress status={l.status} supervisorComment={l.supervisorComment} hrComment={l.hrComment}/></TD>
           <TD><Badge s={l.status}/></TD>
-          <TD style={{fontSize:11,color:C.muted}}>{fmtDate(l.submittedDate)}</TD>
-          <TD><div style={{display:"flex",gap:4}}>
-            {((isSupervisor&&l.status==="Pending Supervisor")||(!isSupervisor&&l.status==="Pending HR"))&&<>
-              <Btn v="success" sm onClick={()=>approve(l)}>{t(lang,"approve")}</Btn>
-              <Btn v="danger" sm onClick={()=>reject(l,"")}>{t(lang,"reject")}</Btn>
-            </>}
-            <Btn v="ghost" sm onClick={()=>setConfirmId(l.id)}>{t(lang,"delete")}</Btn>
+          <TD><div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+            {canAct(l)&&<><Btn v="success" sm onClick={()=>approve(l)}>Approve</Btn><Btn v="danger" sm onClick={()=>{setRejectId(l.id);setRejectComment("");}}>Reject</Btn></>}
+            <Btn v="ghost" sm onClick={()=>setConfirmId(l.id)}>Del</Btn>
           </div></TD>
         </TR>;})}/>
     </>}
     {tab==="types"&&<LeaveTypeAdmin types={leaveTypes} onAdd={onAddType} onEdit={onEditType} onDelete={onDeleteType} lang={lang}/>}
-    {confirmId&&<Confirm msg="Delete leave record?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
-  </div>;
-}
-function LeaveTypeAdmin({types,onAdd,onEdit,onDelete,lang}){
-  const [showForm,setShowForm]=useState(false);
-  const [editIdx,setEditIdx]=useState(null);
-  const [f,setF]=useState({name:"",days:"",paid:true,carryOver:false,desc:""});
-  const setFk=(k,v)=>setF(p=>({...p,[k]:v}));
-  function save(){if(!f.name.trim())return;const d={...f,days:Number(f.days)||0};editIdx!==null?onEdit(editIdx,d):onAdd(d);setShowForm(false);setEditIdx(null);setF({name:"",days:"",paid:true,carryOver:false,desc:""});}
-  return <div>
-    <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><SecTitle>Leave Types (Singapore MOM)</SecTitle><Btn sm onClick={()=>{setEditIdx(null);setF({name:"",days:"",paid:true,carryOver:false,desc:""});setShowForm(true);}}>+ Add Type</Btn></div>
-    <TTable cols={["Leave Type","Days","Paid","Carry Over","Description",""]}
-      rows={types.map((ty,i)=><TR key={i}>
-        <TD style={{fontWeight:600}}>{ty.name}</TD><TD>{ty.days>=999?"Unlimited":ty.days}</TD>
-        <TD><Badge s={ty.paid?"Active":"Inactive"}/></TD><TD style={{fontSize:12}}>{ty.carryOver?"Yes":"No"}</TD>
-        <TD style={{fontSize:12,color:C.muted}}>{ty.desc}</TD>
-        <TD><div style={{display:"flex",gap:4}}><Btn v="outline" sm onClick={()=>{setF({...ty});setEditIdx(i);setShowForm(true);}}>{t(lang,"edit")}</Btn><Btn v="danger" sm onClick={()=>onDelete(i)}>{t(lang,"delete")}</Btn></div></TD>
-      </TR>)}/>
-    {showForm&&<Modal title={editIdx!==null?"Edit Leave Type":"Add Leave Type"} onClose={()=>setShowForm(false)} width={440}>
+
+    {/* Detail modal */}
+    {detail&&<Modal title="Leave Request Detail" onClose={()=>setDetail(null)} width={520}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        {[["Employee",employees.find(e=>e.id===detail.empId)?.name||detail.empId],["Leave Type",detail.type],["From",fmtDate(detail.from)],["To",fmtDate(detail.to)],["Days",detail.days],["Submitted",fmtDate(detail.submittedDate)]].map(([k,v])=><div key={k} style={{background:C.bg,borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:11,color:C.muted}}>{k}</div><div style={{fontWeight:700}}>{v}</div></div>)}
+      </div>
+      <div style={{background:C.bg,borderRadius:7,padding:"10px 12px",marginBottom:12}}><div style={{fontSize:11,color:C.muted,marginBottom:4}}>Reason</div><div style={{fontSize:13}}>{detail.reason}</div></div>
+      <div style={{marginBottom:14}}><div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:8}}>3-Level Approval Progress</div><ApprovalProgress status={detail.status} supervisorComment={detail.supervisorComment} hrComment={detail.hrComment}/></div>
+      {detail.supervisorComment&&<div style={{background:C.warningL,borderRadius:7,padding:"8px 12px",marginBottom:8,fontSize:12}}><strong>Supervisor comment:</strong> {detail.supervisorComment}</div>}
+      {detail.hrComment&&<div style={{background:C.accentL,borderRadius:7,padding:"8px 12px",marginBottom:8,fontSize:12}}><strong>HR comment:</strong> {detail.hrComment}</div>}
+      {canAct(detail)&&<div style={{display:"flex",gap:8,marginTop:12}}><Btn v="success" onClick={()=>approve(detail)}>Approve</Btn><Btn v="danger" onClick={()=>{setRejectId(detail.id);setRejectComment("");}}>Reject</Btn></div>}
+    </Modal>}
+
+    {/* Reject with comment */}
+    {rejectId&&<Modal title="Reject Leave — Add Comment" onClose={()=>setRejectId(null)} width={420}>
+      <Inp label="Reason for rejection" value={rejectComment} onChange={setRejectComment} rows={3} placeholder="Please provide a reason..."/>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:12}}><Btn v="ghost" onClick={()=>setRejectId(null)}>Cancel</Btn><Btn v="danger" onClick={submitReject}>Confirm Reject</Btn></div>
+    </Modal>}
+
+    {/* Apply leave */}
+    {showApply&&<Modal title="Apply Leave on Behalf" onClose={()=>setShowApply(false)} width={480}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Inp label="Leave Type Name" value={f.name} onChange={v=>setFk("name",v)} required/>
-        <Inp label="Days (999 = unlimited)" type="number" value={f.days} onChange={v=>setFk("days",v)}/>
-        <div style={{display:"flex",gap:20}}><label style={{display:"flex",gap:8,fontSize:13}}><input type="checkbox" checked={!!f.paid} onChange={e=>setFk("paid",e.target.checked)}/>Paid</label><label style={{display:"flex",gap:8,fontSize:13}}><input type="checkbox" checked={!!f.carryOver} onChange={e=>setFk("carryOver",e.target.checked)}/>Carry Over</label></div>
-        <Inp label="Description" value={f.desc} onChange={v=>setFk("desc",v)} rows={2}/>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={()=>setShowForm(false)}>{t(lang,"cancel")}</Btn><Btn onClick={save}>{t(lang,"save")}</Btn></div>
+        <Sel label="Employee" value={applyForm.empId} onChange={v=>setApplyForm(p=>({...p,empId:v}))} required options={employees.map(e=>({v:e.id,l:`${e.id} - ${e.name}`}))}/>
+        <Sel label="Leave Type" value={applyForm.type} onChange={v=>setApplyForm(p=>({...p,type:v}))} options={leaveTypes.map(l=>l.name)}/>
+        <Grid><Inp label="From" type="date" value={applyForm.from} onChange={v=>setApplyForm(p=>({...p,from:v}))}/><Inp label="To" type="date" value={applyForm.to} onChange={v=>setApplyForm(p=>({...p,to:v}))}/></Grid>
+        <Inp label="Reason" value={applyForm.reason} onChange={v=>setApplyForm(p=>({...p,reason:v}))} rows={2}/>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={()=>setShowApply(false)}>Cancel</Btn><Btn onClick={submitApply}>Submit</Btn></div>
       </div>
     </Modal>}
+
+    {confirmId&&<Confirm msg="Delete this leave record?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN: CLAIMS MANAGEMENT
+// ADMIN: CLAIMS — 3-Level Approval
 // ═══════════════════════════════════════════════════════════════════════════════
 function AdminClaims({claims,employees,users,session,onAction,onDelete,lang}){
-  const [filter,setFilter]=useState("Pending Supervisor");
+  const [filter,setFilter]=useState("All");
+  const [detail,setDetail]=useState(null);
+  const [rejectId,setRejectId]=useState(null);
+  const [rejectComment,setRejectComment]=useState("");
   const [confirmId,setConfirmId]=useState(null);
   const isSup=session.role==="supervisor";
+  const isHR=session.role==="admin"||session.role==="superadmin";
   const myTeamIds=isSup?users.filter(u=>u.reportingOfficerId===session.id).map(u=>u.empId):null;
   const visible=isSup?claims.filter(c=>myTeamIds.includes(c.empId)):claims;
   const filtered=filter==="All"?visible:visible.filter(c=>c.status===filter);
+  const totalApproved=visible.filter(c=>c.status==="Approved").reduce((s,c)=>s+c.amount,0);
+  function canAct(c){
+    if(isSup&&c.status==="Pending Supervisor")return true;
+    if(isHR&&c.status==="Pending HR")return true;
+    if(session.role==="superadmin")return c.status==="Pending Supervisor"||c.status==="Pending HR";
+    return false;
+  }
   function approve(c){
     if(isSup&&c.status==="Pending Supervisor")onAction(c.id,"Pending HR",session.name,"");
-    else if(!isSup&&c.status==="Pending HR")onAction(c.id,"Approved",session.name,"");
+    else if(isHR&&c.status==="Pending HR")onAction(c.id,"Approved",session.name,"");
+    else if(session.role==="superadmin"){if(c.status==="Pending Supervisor")onAction(c.id,"Pending HR",session.name,"");else onAction(c.id,"Approved",session.name,"");}
+    setDetail(null);
   }
-  const totalApproved=visible.filter(c=>c.status==="Approved").reduce((s,c)=>s+c.amount,0);
+  function submitReject(){onAction(rejectId,"Rejected",session.name,rejectComment);setRejectId(null);setRejectComment("");setDetail(null);}
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <PageTitle title={t(lang,"claims")} sub={`Total Approved: ${sgd(totalApproved)}`} actions={[<Btn v="ghost" sm onClick={()=>exportXLS(filtered.map(c=>{const e=employees.find(x=>x.id===c.empId)||{};return{Name:e.name||"",Type:c.type,Date:fmtDate(c.date),"Amount (S$)":c.amount,Description:c.description,Status:c.status,"Supervisor":c.supervisorComment,"HR":c.hrComment};}),"Claims",`claims_${todayStr()}.xlsx`)}>{t(lang,"export")}</Btn>]}/>
+    <PageTitle title={t(lang,"claims")} sub={`Total Approved: ${sgd(totalApproved)}`} actions={[<Btn v="ghost" onClick={()=>exportXLS(filtered.map(c=>{const e=employees.find(x=>x.id===c.empId)||{};return{Name:e.name||"",Type:c.type,Date:fmtDate(c.date),"Amount (S$)":c.amount,Description:c.description,Status:c.status,"Sup Comment":c.supervisorComment||"","HR Comment":c.hrComment||""};}), "Claims",`claims_${todayStr()}.xlsx`)}>{t(lang,"export")}</Btn>]}/>
+
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      <StatCard label="Pending Supervisor" value={visible.filter(c=>c.status==="Pending Supervisor").length} icon="1" color={C.warning} sub="Step 1 of 3"/>
+      <StatCard label="Pending HR" value={visible.filter(c=>c.status==="Pending HR").length} icon="2" color={C.purple} sub="Step 2 of 3"/>
+      <StatCard label="Approved" value={visible.filter(c=>c.status==="Approved").length} icon="✓" color={C.success}/>
+      <StatCard label="Total Approved" value={sgd(totalApproved)} icon="$" color={C.teal}/>
+    </div>
+
+    <div style={{background:isSup?C.warningL:C.accentL,borderRadius:8,padding:"10px 14px",fontSize:13,fontWeight:600,color:isSup?C.warningD:C.accentT}}>
+      {isSup?"Your role: Supervisor — You verify Step 1 (Pending Supervisor)":"Your role: HR Admin — You approve Step 2 (Pending HR)"}
+    </div>
+
     <FilterBar>{["All","Pending Supervisor","Pending HR","Approved","Rejected"].map(s=><StatusPill key={s} s={s} active={filter===s} onClick={setFilter}/>)}</FilterBar>
-    <TTable cols={["Employee","Type","Date","Amount","Description","Status","Actions"]}
-      rows={filtered.map(c=>{const emp=employees.find(e=>e.id===c.empId);return <TR key={c.id}>
-        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={24}/><span style={{fontWeight:600,fontSize:12}}>{emp?.name||c.empId}</span></div></TD>
-        <TD><Badge s={c.type}/></TD><TD style={{fontSize:12}}>{fmtDate(c.date)}</TD>
+
+    <TTable cols={["Employee","Type","Date","Amount","Description","Approval Progress","Status","Actions"]}
+      rows={filtered.sort((a,b)=>{const ord={"Pending Supervisor":0,"Pending HR":1,"Approved":2,"Rejected":3};return(ord[a.status]||4)-(ord[b.status]||4);}).map(c=>{const emp=employees.find(e=>e.id===c.empId);return<TR key={c.id} onClick={()=>setDetail(c)}>
+        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={26}/><span style={{fontWeight:600,fontSize:12}}>{emp?.name||c.empId}</span></div></TD>
+        <TD><Badge s={c.type}/></TD>
+        <TD style={{fontSize:12}}>{fmtDate(c.date)}</TD>
         <TD style={{fontWeight:700,color:C.success}}>{sgd(c.amount)}</TD>
-        <TD style={{fontSize:12,color:C.muted}}>{c.description.slice(0,30)}</TD>
+        <TD style={{fontSize:12,color:C.muted,maxWidth:130}}><span title={c.description}>{c.description.slice(0,30)}{c.description.length>30?"...":""}</span></TD>
+        <TD><ApprovalProgress status={c.status} supervisorComment={c.supervisorComment} hrComment={c.hrComment}/></TD>
         <TD><Badge s={c.status}/></TD>
-        <TD><div style={{display:"flex",gap:4}}>
-          {((isSup&&c.status==="Pending Supervisor")||(!isSup&&c.status==="Pending HR"))&&<><Btn v="success" sm onClick={()=>approve(c)}>{t(lang,"approve")}</Btn><Btn v="danger" sm onClick={()=>onAction(c.id,"Rejected",session.name,"")}>{t(lang,"reject")}</Btn></>}
-          <Btn v="ghost" sm onClick={()=>setConfirmId(c.id)}>{t(lang,"delete")}</Btn>
+        <TD><div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+          {canAct(c)&&<><Btn v="success" sm onClick={()=>approve(c)}>Approve</Btn><Btn v="danger" sm onClick={()=>{setRejectId(c.id);setRejectComment("");}}>Reject</Btn></>}
+          <Btn v="ghost" sm onClick={()=>setConfirmId(c.id)}>Del</Btn>
         </div></TD>
       </TR>;})}/>
+
+    {detail&&<Modal title="Claim Detail" onClose={()=>setDetail(null)} width={520}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {[["Employee",employees.find(e=>e.id===detail.empId)?.name||detail.empId],["Type",detail.type],["Date",fmtDate(detail.date)],["Amount",sgd(detail.amount)]].map(([k,v])=><div key={k} style={{background:C.bg,borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:11,color:C.muted}}>{k}</div><div style={{fontWeight:700}}>{v}</div></div>)}
+      </div>
+      <div style={{background:C.bg,borderRadius:7,padding:"10px 12px",marginBottom:12}}><div style={{fontSize:11,color:C.muted,marginBottom:4}}>Description</div><div style={{fontSize:13}}>{detail.description}</div></div>
+      <div style={{marginBottom:14}}><div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:8}}>3-Level Approval Progress</div><ApprovalProgress status={detail.status} supervisorComment={detail.supervisorComment} hrComment={detail.hrComment}/></div>
+      {detail.supervisorComment&&<div style={{background:C.warningL,borderRadius:7,padding:"8px 12px",marginBottom:8,fontSize:12}}><strong>Supervisor comment:</strong> {detail.supervisorComment}</div>}
+      {detail.hrComment&&<div style={{background:C.accentL,borderRadius:7,padding:"8px 12px",marginBottom:8,fontSize:12}}><strong>HR comment:</strong> {detail.hrComment}</div>}
+      {canAct(detail)&&<div style={{display:"flex",gap:8,marginTop:12}}><Btn v="success" onClick={()=>approve(detail)}>Approve</Btn><Btn v="danger" onClick={()=>{setRejectId(detail.id);setRejectComment("");}}>Reject</Btn></div>}
+    </Modal>}
+    {rejectId&&<Modal title="Reject Claim — Add Comment" onClose={()=>setRejectId(null)} width={420}>
+      <Inp label="Reason for rejection" value={rejectComment} onChange={setRejectComment} rows={3} placeholder="Please provide a reason..."/>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:12}}><Btn v="ghost" onClick={()=>setRejectId(null)}>Cancel</Btn><Btn v="danger" onClick={submitReject}>Confirm Reject</Btn></div>
+    </Modal>}
     {confirmId&&<Confirm msg="Delete claim?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN: HR MEMO
-// ═══════════════════════════════════════════════════════════════════════════════
 function AdminMemo({memos,onAdd,onEdit,onDelete,session,lang}){
   const [showForm,setShowForm]=useState(false);
   const [editM,setEditM]=useState(null);
@@ -1300,26 +1449,144 @@ function AdminCalendar({events,leaves,employees,onAdd,onEdit,onDelete,session,la
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN: PAYROLL (MOM Singapore)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: PAYROLL — Fully Editable with OT / Reimbursement / Claims Breakdown
+// ═══════════════════════════════════════════════════════════════════════════════
+function PayrollEntryModal({emp,existing,month,claims,onSave,onClose}){
+  const approvedOT=claims.filter(c=>c.empId===emp.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
+  const approvedReimb=claims.filter(c=>c.empId===emp.id&&c.type!=="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
+  const [f,setF]=useState({
+    basic:String((existing?.basic??Number(emp.basicSalary))||0),
+    allowance:String((existing?.allowance??Number(emp.allowance))||0),
+    otManual:String(existing?.otManual||0),
+    reimbManual:String(existing?.reimbManual||0),
+    commission:String(existing?.commission||0),
+    otherEarnings:String(existing?.otherEarnings||0),
+    otherDeductions:String(existing?.otherDeductions||0),
+    notes:existing?.notes||"",
+  });
+  const setFk=(k,v)=>setF(p=>({...p,[k]:v}));
+  const n=k=>Number(f[k])||0;
+  const totalOT=approvedOT+n("otManual");
+  const totalReimb=approvedReimb+n("reimbManual");
+  const gross=n("basic")+n("allowance")+totalOT+totalReimb+n("commission")+n("otherEarnings");
+  const cpf=calcCPF(n("basic"),emp.nationality);
+  const sdl=calcSDF(n("basic"));
+  const netPay=gross-cpf.employee-n("otherDeductions");
+  function save(){
+    onSave({
+      id:existing?.id||uid(),empId:emp.id,month,
+      basic:n("basic"),allowance:n("allowance"),
+      otPay:totalOT,otManual:n("otManual"),otClaims:approvedOT,
+      reimbursement:totalReimb,reimbManual:n("reimbManual"),reimbClaims:approvedReimb,
+      commission:n("commission"),otherEarnings:n("otherEarnings"),
+      otherDeductions:n("otherDeductions"),notes:f.notes,
+      gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay,
+      status:existing?.status||"Draft",processedOn:todayStr(),publishedOn:existing?.publishedOn||"",
+    });
+    onClose();
+  }
+  const row=(label,value,color,bold)=><div style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid "+C.border}}>
+    <span style={{color:C.muted,fontSize:13}}>{label}</span><span style={{color:color||C.text,fontWeight:bold?800:600,fontSize:bold?15:13}}>{value}</span>
+  </div>;
+  return <Modal title={`Payroll Entry — ${emp.name}`} onClose={onClose} width={620}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      {/* LEFT: Editable Inputs */}
+      <div>
+        <FormSection title="Earnings">
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <Inp label="Basic Salary (S$)" type="number" value={f.basic} onChange={v=>setFk("basic",v)}/>
+            <Inp label="Allowance (S$)" type="number" value={f.allowance} onChange={v=>setFk("allowance",v)}/>
+            <div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}>
+              <div style={{fontSize:11,color:C.teal,fontWeight:700}}>OT from Approved Claims (auto)</div>
+              <div style={{fontWeight:800,fontSize:15,color:C.teal}}>{sgd(approvedOT)}</div>
+            </div>
+            <Inp label="Additional OT (manual, S$)" type="number" value={f.otManual} onChange={v=>setFk("otManual",v)}/>
+            <div style={{background:C.tealL,borderRadius:7,padding:"8px 12px"}}>
+              <div style={{fontSize:11,color:C.teal,fontWeight:700}}>Reimbursements from Claims (auto)</div>
+              <div style={{fontWeight:800,fontSize:15,color:C.teal}}>{sgd(approvedReimb)}</div>
+            </div>
+            <Inp label="Additional Reimbursement (S$)" type="number" value={f.reimbManual} onChange={v=>setFk("reimbManual",v)}/>
+            <Inp label="Commission (S$)" type="number" value={f.commission} onChange={v=>setFk("commission",v)}/>
+            <Inp label="Other Earnings (S$)" type="number" value={f.otherEarnings} onChange={v=>setFk("otherEarnings",v)}/>
+          </div>
+        </FormSection>
+        <FormSection title="Deductions">
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{background:C.dangerL,borderRadius:7,padding:"8px 12px"}}>
+              <div style={{fontSize:11,color:C.dangerD,fontWeight:700}}>CPF Employee 20% (auto, capped S$1,200)</div>
+              <div style={{fontWeight:800,fontSize:15,color:C.danger}}>{sgd(cpf.employee)}</div>
+            </div>
+            <Inp label="Other Deductions (S$)" type="number" value={f.otherDeductions} onChange={v=>setFk("otherDeductions",v)} placeholder="e.g. loan repayment"/>
+          </div>
+        </FormSection>
+        <Inp label="Payroll Notes" value={f.notes} onChange={v=>setFk("notes",v)} placeholder="Optional notes..." rows={2}/>
+      </div>
+      {/* RIGHT: Live Preview */}
+      <div>
+        <FormSection title="Payslip Preview">
+          {row("Basic Salary",sgd(n("basic")))}
+          {row("Allowance",sgd(n("allowance")))}
+          {(totalOT>0)&&row("OT Pay",sgd(totalOT),C.teal)}
+          {(totalReimb>0)&&row("Reimbursements",sgd(totalReimb),C.teal)}
+          {n("commission")>0&&row("Commission",sgd(n("commission")))}
+          {n("otherEarnings")>0&&row("Other Earnings",sgd(n("otherEarnings")))}
+          {row("GROSS PAY",sgd(gross),C.text,true)}
+          <div style={{height:8}}/>
+          {row("CPF (Employee 20%)","-"+sgd(cpf.employee),C.danger)}
+          {n("otherDeductions")>0&&row("Other Deductions","-"+sgd(n("otherDeductions")),C.danger)}
+          <div style={{background:C.successL,borderRadius:8,padding:"12px 14px",margin:"10px 0"}}>
+            <div style={{fontSize:11,color:C.successD,fontWeight:700}}>NET PAY</div>
+            <div style={{fontSize:24,fontWeight:800,color:C.successD}}>{sgd(netPay)}</div>
+          </div>
+          <div style={{background:C.bg,borderRadius:8,padding:"10px 12px"}}>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>EMPLOYER CONTRIBUTIONS</div>
+            {row("CPF Employer (17%)",sgd(cpf.employer),C.warning)}
+            {row("Skills Development Levy",sgd(sdl))}
+          </div>
+        </FormSection>
+        <div style={{background:C.bg,borderRadius:8,padding:"10px 12px",marginTop:10}}>
+          <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>EMPLOYEE INFO</div>
+          <div style={{fontSize:12}}>{emp.nationality} · {emp.workPass} · {emp.fin||"—"}</div>
+          <div style={{fontSize:11,color:C.muted,marginTop:2}}>CPF applies: {(emp.nationality==="Singaporean"||emp.nationality==="SPR")?"Yes":"No (EP/WP exempt)"}</div>
+        </div>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:16,paddingTop:14,borderTop:"1px solid "+C.border}}>
+      <Btn v="ghost" onClick={onClose}>Cancel</Btn>
+      <Btn onClick={save}>{existing?"Update Payroll Entry":"Save Payroll Entry"}</Btn>
+    </div>
+  </Modal>;
+}
+
 function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,lang}){
   const [month,setMonth]=useState(new Date().toISOString().slice(0,7));
-  const [showSlip,setShowSlip]=useState(null);
+  const [editEntry,setEditEntry]=useState(null);
   const [confirmId,setConfirmId]=useState(null);
+  const [showSlip,setShowSlip]=useState(null);
   const processed=payroll.filter(p=>p.month===month);
   const processedIds=new Set(processed.map(p=>p.empId));
   const activeEmps=employees.filter(e=>e.status==="Active");
-  function processOne(e){
+  const totGross=processed.reduce((s,p)=>s+p.gross,0);
+  const totNet=processed.reduce((s,p)=>s+p.netPay,0);
+  const totEmpCPF=processed.reduce((s,p)=>s+p.cpfEmployee,0);
+  const totErCPF=processed.reduce((s,p)=>s+p.cpfEmployer,0);
+  function processAll(){activeEmps.filter(e=>!processedIds.has(e.id)).forEach(e=>{
     const basic=Number(e.basicSalary)||0;const allow=Number(e.allowance)||0;
-    const approvedOT=claims.filter(c=>c.empId===e.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
-    const gross=basic+allow+approvedOT;const cpf=calcCPF(basic,e.nationality);const sdl=calcSDF(basic);const netPay=gross-cpf.employee;
-    onProcess({id:uid(),empId:e.id,month,basic,allowance:allow,otPay:approvedOT,gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay,status:"Draft",processedOn:todayStr(),publishedOn:""});
-  }
-  function processAll(){activeEmps.filter(e=>!processedIds.has(e.id)).forEach(processOne);}
-  function doExport(){exportMulti([{n:"Payroll Summary",data:processed.map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,"Emp ID":p.empId,Name:e.name||"",Company:e.company||"",Nationality:e.nationality||"","Work Pass":e.workPass||"","FIN/NRIC":e.fin||"","Basic (S$)":p.basic,"Allow (S$)":p.allowance,"OT (S$)":p.otPay||0,"Gross (S$)":p.gross,"CPF Ee (S$)":p.cpfEmployee,"CPF Er (S$)":p.cpfEmployer,"SDL (S$)":p.sdl,"Net Pay (S$)":p.netPay,Status:p.status};})},{n:"CPF Submission",data:processed.filter(p=>p.cpfEmployee>0).map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,Name:e.name||"","FIN/NRIC":e.fin||""," OW":p.basic," AW":p.allowance,"Ee CPF":p.cpfEmployee,"Er CPF":p.cpfEmployer,"Total":p.cpfEmployee+p.cpfEmployer};})}],`payroll_${month}.xlsx`);}
-  const totGross=processed.reduce((s,p)=>s+p.gross,0);const totNet=processed.reduce((s,p)=>s+p.netPay,0);const totEmpCPF=processed.reduce((s,p)=>s+p.cpfEmployee,0);const totErCPF=processed.reduce((s,p)=>s+p.cpfEmployer,0);
+    const otPay=claims.filter(c=>c.empId===e.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
+    const reimb=claims.filter(c=>c.empId===e.id&&c.type!=="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
+    const gross=basic+allow+otPay+reimb;const cpf=calcCPF(basic,e.nationality);const sdl=calcSDF(basic);
+    onProcess({id:uid(),empId:e.id,month,basic,allowance:allow,otPay,otClaims:otPay,reimbursement:reimb,reimbClaims:reimb,commission:0,otherEarnings:0,otherDeductions:0,gross,cpfEmployee:cpf.employee,cpfEmployer:cpf.employer,sdl,netPay:gross-cpf.employee,status:"Draft",processedOn:todayStr(),publishedOn:"",notes:""});
+  });}
+  function doExport(){exportMulti([
+    {n:"Payroll Summary",data:processed.map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,"Emp ID":p.empId,Name:e.name||"",Company:e.company||"",Nationality:e.nationality||"","Work Pass":e.workPass||"","FIN/NRIC":e.fin||"","Basic (S$)":p.basic,"Allowance (S$)":p.allowance,"OT (S$)":p.otPay||0,"Reimbursement (S$)":p.reimbursement||0,"Commission (S$)":p.commission||0,"Gross (S$)":p.gross,"CPF Ee (S$)":p.cpfEmployee,"CPF Er (S$)":p.cpfEmployer,"SDL (S$)":p.sdl,"Other Deductions":p.otherDeductions||0,"Net Pay (S$)":p.netPay,Status:p.status,Notes:p.notes||""}; })},
+    {n:"CPF Submission",data:processed.filter(p=>p.cpfEmployee>0).map(p=>{const e=employees.find(x=>x.id===p.empId)||{};return{Month:p.month,Name:e.name||"","FIN/NRIC":e.fin||"","Ordinary Wages":p.basic,"Additional Wages":(p.allowance||0)+(p.otPay||0)+(p.commission||0),"Ee CPF":p.cpfEmployee,"Er CPF":p.cpfEmployer,"Total CPF":p.cpfEmployee+p.cpfEmployer};})},
+  ],`payroll_${month}.xlsx`);}
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
-      <div><h1 style={{fontSize:19,fontWeight:800,margin:0}}>{t(lang,"payroll")}</h1><input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{...IS,width:160,marginTop:6}}/></div>
-      <div style={{display:"flex",gap:8}}><Btn v="ghost" onClick={doExport}>{t(lang,"export")}</Btn><Btn v="warning" onClick={processAll} disabled={activeEmps.filter(e=>!processedIds.has(e.id)).length===0}>Process All</Btn></div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+      <div><h1 style={{fontSize:19,fontWeight:800,margin:0,color:C.text}}>{t(lang,"payroll")}</h1><input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{...IS,width:160,marginTop:6}}/></div>
+      <div style={{display:"flex",gap:8}}><Btn v="ghost" onClick={doExport}>{t(lang,"export")}</Btn><Btn v="warning" onClick={processAll} disabled={activeEmps.filter(e=>!processedIds.has(e.id)).length===0}>Process All (Default)</Btn></div>
     </div>
     <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
       <StatCard label="Total Gross" value={sgd(totGross)} icon="$" color={C.accent}/>
@@ -1327,34 +1594,35 @@ function AdminPayroll({employees,payroll,claims,onProcess,onDelete,onPublish,lan
       <StatCard label="CPF (Employee)" value={sgd(totEmpCPF)} icon="E" color={C.purple}/>
       <StatCard label="CPF (Employer)" value={sgd(totErCPF)} icon="R" color={C.warning}/>
     </div>
-    <TTable cols={["Employee","Nationality","Basic","OT","Gross","CPF Ee","CPF Er","SDL","Net Pay","Status",""]}
-      rows={activeEmps.map(e=>{const p=processed.find(x=>x.empId===e.id);const basic=Number(e.basicSalary)||0;const allow=Number(e.allowance)||0;const cpf=calcCPF(basic,e.nationality);const pendingOT=claims.filter(c=>c.empId===e.id&&c.type==="OT"&&c.status==="Approved"&&c.date.startsWith(month)).reduce((s,c)=>s+c.amount,0);
-      return <TR key={e.id}>
-        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={24}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
+    <TTable cols={["Employee","Nationality","Basic","OT","Reimb","Gross","CPF Ee","Net Pay","Status","Actions"]}
+      rows={activeEmps.map(e=>{const p=processed.find(x=>x.empId===e.id);const basic=Number(e.basicSalary)||0;const allow=Number(e.allowance)||0;const cpf=calcCPF(basic,e.nationality);
+      return<TR key={e.id}>
+        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
         <TD style={{fontSize:11}}>{e.nationality}</TD>
         <TD style={{fontSize:12}}>{sgd(p?.basic||basic+allow)}</TD>
-        <TD style={{fontSize:12,color:C.teal}}>{sgd(p?.otPay||pendingOT)}</TD>
-        <TD style={{fontWeight:600}}>{sgd(p?.gross||basic+allow+pendingOT)}</TD>
+        <TD style={{fontSize:12,color:C.teal}}>{sgd(p?.otPay||0)}</TD>
+        <TD style={{fontSize:12,color:C.teal}}>{sgd(p?.reimbursement||0)}</TD>
+        <TD style={{fontWeight:600}}>{sgd(p?.gross||basic+allow)}</TD>
         <TD style={{color:C.danger,fontSize:12}}>{sgd(p?.cpfEmployee||cpf.employee)}</TD>
-        <TD style={{color:C.warning,fontSize:12}}>{sgd(p?.cpfEmployer||cpf.employer)}</TD>
-        <TD style={{fontSize:11}}>{sgd(p?.sdl||calcSDF(basic))}</TD>
-        <TD style={{fontWeight:700,color:C.success}}>{sgd(p?.netPay||(basic+allow+pendingOT-cpf.employee))}</TD>
+        <TD style={{fontWeight:700,color:C.success}}>{sgd(p?.netPay||(basic+allow-cpf.employee))}</TD>
         <TD><Badge s={p?.status||"Draft"}/></TD>
-        <TD><div style={{display:"flex",gap:4}}>
-          <Btn v="ghost" sm onClick={()=>setShowSlip({emp:e,p})}>Slip</Btn>
-          {!p&&<Btn v="success" sm onClick={()=>processOne(e)}>Process</Btn>}
-          {p&&p.status==="Draft"&&<Btn v="primary" sm onClick={()=>onPublish(p.id)}>Publish</Btn>}
+        <TD><div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <Btn v={p?"outline":"primary"} sm onClick={()=>setEditEntry({emp:e,existing:p})}>{p?"Edit":"Process"}</Btn>
+          {p&&<Btn v="ghost" sm onClick={()=>setShowSlip({emp:e,p})}>Slip</Btn>}
+          {p&&p.status==="Draft"&&<Btn v="success" sm onClick={()=>onPublish(p.id)}>Publish</Btn>}
           {p&&<Btn v="danger" sm onClick={()=>setConfirmId(p.id)}>Del</Btn>}
         </div></TD>
       </TR>;})}/>
-    {showSlip&&<Modal title="Payslip Preview" onClose={()=>setShowSlip(null)} width={440}><EmpPayslip empId={showSlip.emp.id} payroll={[...(showSlip.p?[{...showSlip.p,status:"Published"}]:[])]} employees={employees} lang={lang}/></Modal>}
+    {editEntry&&<PayrollEntryModal emp={editEntry.emp} existing={editEntry.existing} month={month} claims={claims}
+      onSave={d=>{if(editEntry.existing){onDelete(editEntry.existing.id);onProcess({...d,id:uid()});}else{onProcess(d);}setEditEntry(null);}}
+      onClose={()=>setEditEntry(null)}/>}
+    {showSlip&&<Modal title="Payslip Preview" onClose={()=>setShowSlip(null)} width={440}>
+      <EmpPayslip empId={showSlip.emp.id} payroll={[{...showSlip.p,status:"Published"}]} employees={employees} lang={lang}/>
+    </Modal>}
     {confirmId&&<Confirm msg="Delete payroll record?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN: SHIFT SCHEDULE
-// ═══════════════════════════════════════════════════════════════════════════════
 function AdminShift({shifts,employees,onAdd,onEdit,onDelete,lang}){
   const [showForm,setShowForm]=useState(false);
   const [editS,setEditS]=useState(null);
@@ -1479,92 +1747,217 @@ function Login({users,onLogin,lang,setLang}){
 const EMP_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payslip",l:"payslip",icon:"$"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"K"},{id:"shift",l:"shift",icon:"S"}];
 const ADMIN_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"employees",l:"employees",icon:"E"},{id:"users",l:"settings",icon:"U"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payroll",l:"payroll",icon:"$"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"K"},{id:"shift",l:"shift",icon:"S"}];
 
+
 export default function App(){
   const [session,setSession]=useState(null);
   const [lang,setLang]=useState("en");
   const [page,setPage]=useState("dashboard");
-  const [employees,setEmployees]=useState(INIT_EMPLOYEES);
-  const [users,setUsers]=useState(INIT_USERS);
-  const [leaves,setLeaves]=useState(INIT_LEAVES);
-  const [leaveTypes,setLeaveTypes]=useState(SG_LEAVE_TYPES);
-  const [claims,setClaims]=useState(INIT_CLAIMS);
-  const [payroll,setPayroll]=useState(INIT_PAYROLL);
-  const [memos,setMemos]=useState(INIT_MEMOS);
-  const [policies,setPolicies]=useState(INIT_POLICIES);
-  const [trainings,setTrainings]=useState(INIT_TRAININGS);
-  const [feedbacks,setFeedbacks]=useState(INIT_FEEDBACKS);
-  const [feedbackSections,setFeedbackSections]=useState(INIT_FEEDBACK_SECTIONS);
-  const [appraisalForms,setAppraisalForms]=useState(INIT_APPRAISAL_FORMS);
-  const [appraisalSubs,setAppraisalSubs]=useState(INIT_APPRAISAL_SUBMISSIONS);
-  const [attendance,setAttendance]=useState(INIT_ATTENDANCE);
-  const [shifts,setShifts]=useState(INIT_SHIFTS);
-  const [calEvents,setCalEvents]=useState(INIT_CALENDAR_EVENTS);
   const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  // ── Data states (populated by Firestore real-time listeners) ──────────────
+  const [employees,setEmployees]=useState([]);
+  const [users,setUsers]=useState([]);
+  const [leaves,setLeaves]=useState([]);
+  const [leaveTypes,setLeaveTypes]=useState(SG_LEAVE_TYPES);
+  const [claims,setClaims]=useState([]);
+  const [payroll,setPayroll]=useState([]);
+  const [memos,setMemos]=useState([]);
+  const [policies,setPolicies]=useState([]);
+  const [trainings,setTrainings]=useState([]);
+  const [feedbacks,setFeedbacks]=useState([]);
+  const [feedbackSections,setFeedbackSections]=useState([]);
+  const [appraisalForms,setAppraisalForms]=useState([]);
+  const [appraisalSubs,setAppraisalSubs]=useState([]);
+  const [attendance,setAttendance]=useState([]);
+  const [shifts,setShifts]=useState([]);
+  const [calEvents,setCalEvents]=useState([]);
 
   function toast_(msg,type){setToast({msg,type:type||"success"});}
+
+  // ── Firestore helpers ─────────────────────────────────────────────────────
+  const snap2arr=s=>s.docs.map(d=>({...d.data(),id:d.id}));
+  const fsAdd=(col,data)=>addDoc(collection(db,col),data);
+  const fsSet=(col,id,data)=>setDoc(doc(db,col,id),data);
+  const fsUp=(col,id,data)=>updateDoc(doc(db,col,id),data);
+  const fsDel=(col,id)=>deleteDoc(doc(db,col,id));
+  async function fsAddId(col,data){const r=await addDoc(collection(db,col),data);await fsUp(col,r.id,{id:r.id});return r.id;}
+
+  // ── Seed + Subscribe ──────────────────────────────────────────────────────
+  useEffect(()=>{
+    async function init(){
+      try{
+        const empSnap=await getDocs(collection(db,'employees'));
+        if(empSnap.size===0){
+          const batch=writeBatch(db);
+          INIT_EMPLOYEES.forEach(e=>batch.set(doc(db,'employees',e.id),e));
+          INIT_USERS.forEach(u=>batch.set(doc(db,'users',u.id),u));
+          SG_LEAVE_TYPES.forEach((lt,i)=>batch.set(doc(db,'leaveTypes',`lt${i}`),lt));
+          const seedCol=(items,col)=>items.forEach(item=>{
+            const r=doc(collection(db,col));
+            batch.set(r,{...item,id:r.id});
+          });
+          seedCol(INIT_LEAVES,'leaves');
+          seedCol(INIT_CLAIMS,'claims');
+          seedCol(INIT_MEMOS,'memos');
+          seedCol(INIT_POLICIES,'policies');
+          seedCol(INIT_TRAININGS,'trainings');
+          seedCol(INIT_FEEDBACKS,'feedbacks');
+          seedCol(INIT_FEEDBACK_SECTIONS,'feedbackSections');
+          seedCol(INIT_ATTENDANCE,'attendance');
+          seedCol(INIT_SHIFTS,'shifts');
+          seedCol(INIT_CALENDAR_EVENTS,'calEvents');
+          await batch.commit();
+          console.log('Custera.HR: Database seeded successfully.');
+        }
+      }catch(e){console.error('Seed error:',e);}
+    }
+    init();
+    const subs=[
+      onSnapshot(collection(db,'employees'),s=>{setEmployees(snap2arr(s));setLoading(false);}),
+      onSnapshot(collection(db,'users'),s=>setUsers(snap2arr(s))),
+      onSnapshot(collection(db,'leaveTypes'),s=>{const d=snap2arr(s);if(d.length)setLeaveTypes(d);}),
+      onSnapshot(collection(db,'leaves'),s=>setLeaves(snap2arr(s))),
+      onSnapshot(collection(db,'claims'),s=>setClaims(snap2arr(s))),
+      onSnapshot(collection(db,'payroll'),s=>setPayroll(snap2arr(s))),
+      onSnapshot(collection(db,'memos'),s=>setMemos(snap2arr(s))),
+      onSnapshot(collection(db,'policies'),s=>setPolicies(snap2arr(s))),
+      onSnapshot(collection(db,'trainings'),s=>setTrainings(snap2arr(s))),
+      onSnapshot(collection(db,'feedbacks'),s=>setFeedbacks(snap2arr(s))),
+      onSnapshot(collection(db,'feedbackSections'),s=>setFeedbackSections(snap2arr(s))),
+      onSnapshot(collection(db,'appraisalForms'),s=>setAppraisalForms(snap2arr(s))),
+      onSnapshot(collection(db,'appraisalSubs'),s=>setAppraisalSubs(snap2arr(s))),
+      onSnapshot(collection(db,'attendance'),s=>setAttendance(snap2arr(s))),
+      onSnapshot(collection(db,'shifts'),s=>setShifts(snap2arr(s))),
+      onSnapshot(collection(db,'calEvents'),s=>setCalEvents(snap2arr(s))),
+    ];
+    return()=>subs.forEach(u=>u());
+  },[]);
+
   const isAdmin=session&&(session.role==="admin"||session.role==="superadmin");
   const isSupervisor=session?.role==="supervisor";
   const isAdminOrSup=isAdmin||isSupervisor;
+  const empId=session?.empId;
+  const NAV=isAdminOrSup?ADMIN_NAV:EMP_NAV;
+  const unreadMemos=memos.filter(m=>!(m.readBy||[]).includes(empId));
+  const showMemoPopup=!isAdminOrSup&&unreadMemos.length>0;
+
+  // ── Loading screen ────────────────────────────────────────────────────────
+  if(loading)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,flexDirection:"column",gap:16}}>
+      <div style={{width:56,height:56,background:C.accent,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>C.HR</div>
+      <div style={{fontSize:14,color:C.muted,fontWeight:600}}>Custera.HR</div>
+      <div style={{fontSize:12,color:C.muted}}>Connecting to database...</div>
+      <div style={{width:200,height:4,background:C.border,borderRadius:99,overflow:"hidden"}}>
+        <div style={{width:"60%",height:"100%",background:C.accent,borderRadius:99,animation:"none"}}/>
+      </div>
+    </div>
+  );
 
   if(!session)return <Login users={users} onLogin={u=>{setSession(u);setPage("dashboard");}} lang={lang} setLang={setLang}/>;
 
-  const empId=session.empId;
-  const NAV=isAdminOrSup?ADMIN_NAV:EMP_NAV;
+  // ── EMPLOYEES ─────────────────────────────────────────────────────────────
+  function addEmp(d){
+    const id=d.id||"C"+String(employees.length+1).padStart(3,"0");
+    fsSet('employees',id,{...d,id});
+    toast_("Employee added.");
+  }
+  function editEmp(id,d){fsUp('employees',id,{...d,id});toast_("Employee updated.");}
+  function delEmp(id){fsDel('employees',id);toast_("Employee deleted.","error");}
 
-  // CRUD helpers
-  const crud=(setter,toastMsg)=>({
-    add:(d)=>{setter(p=>[...p,{...d,id:d.id||uid()}]);toast_(toastMsg||(t(lang,"add")+" ok"));},
-    edit:(id,d)=>{setter(p=>p.map(x=>x.id===id?{...x,...d,id}:x));toast_(t(lang,"save")+" ok");},
-    del:(id)=>{setter(p=>p.filter(x=>x.id!==id));toast_("Deleted","error");},
-  });
+  // ── USERS ─────────────────────────────────────────────────────────────────
+  function addUser(d){const id=d.id||("u"+uid());fsSet('users',id,{...d,id});toast_("Account created.");}
+  function editUser(id,d){fsUp('users',id,{...d,id});toast_("Account updated.");}
+  function delUser(id){fsDel('users',id);toast_("Account deleted.","error");}
+  function resetPw(id,pw){fsUp('users',id,{password:pw});toast_("Password reset.");}
 
-  const empCrud=crud(setEmployees,"Employee saved");
-  const userCrud={
-    add:(d)=>{setUsers(p=>[...p,{...d,id:d.id||"u"+uid()}]);toast_("Account created");},
-    edit:(id,d)=>{setUsers(p=>p.map(x=>x.id===id?{...x,...d,id}:x));toast_("Account updated");},
-    del:(id)=>{setUsers(p=>p.filter(x=>x.id!==id));toast_("Account deleted","error");},
-    resetPw:(id,pw)=>{setUsers(p=>p.map(x=>x.id===id?{...x,password:pw}:x));toast_("Password reset");},
-  };
+  // ── LEAVES ────────────────────────────────────────────────────────────────
+  function addLeave(d){fsAddId('leaves',{...d});toast_("Leave submitted.");}
+  function leaveAction(id,status,by,comment){
+    const l=leaves.find(x=>x.id===id);if(!l)return;
+    const upd={status};
+    if(l.status==="Pending Supervisor")upd.supervisorComment=comment||by||"";
+    else if(l.status==="Pending HR")upd.hrComment=comment||by||"";
+    fsUp('leaves',id,upd);
+    toast_(status==="Approved"?"Leave approved":status==="Rejected"?"Leave rejected":"Updated",status==="Rejected"?"error":"success");
+  }
+  function delLeave(id){fsDel('leaves',id);toast_("Deleted.","error");}
+  function addLT(d){fsAdd('leaveTypes',d);}
+  function editLT(i,d){if(leaveTypes[i]?.id)fsUp('leaveTypes',leaveTypes[i].id,d);}
+  function delLT(i){if(leaveTypes[i]?.id)fsDel('leaveTypes',leaveTypes[i].id);}
 
-  function addLeave(d){setLeaves(p=>[...p,{...d,id:uid()}]);toast_("Leave submitted");}
-  function leaveAction(id,status,by,comment){setLeaves(p=>p.map(l=>l.id===id?{...l,status,supervisorComment:l.status==="Pending Supervisor"?comment:l.supervisorComment,hrComment:l.status==="Pending HR"?comment:l.hrComment}:l));toast_(status==="Approved"?"Approved":status==="Rejected"?"Rejected":"Updated",status==="Rejected"?"error":"success");}
-  function delLeave(id){setLeaves(p=>p.filter(l=>l.id!==id));toast_("Deleted","error");}
-  function addLT(d){setLeaveTypes(p=>[...p,d]);}function editLT(i,d){setLeaveTypes(p=>p.map((x,xi)=>xi===i?d:x));}function delLT(i){setLeaveTypes(p=>p.filter((_,xi)=>xi!==i));}
+  // ── CLAIMS ────────────────────────────────────────────────────────────────
+  function addClaim(d){fsAddId('claims',{...d});toast_("Claim submitted.");}
+  function claimAction(id,status,by,comment){
+    const c=claims.find(x=>x.id===id);if(!c)return;
+    const upd={status};
+    if(c.status==="Pending Supervisor")upd.supervisorComment=by||"";
+    else if(c.status==="Pending HR")upd.hrComment=by||"";
+    fsUp('claims',id,upd);toast_(status,"success");
+  }
+  function delClaim(id){fsDel('claims',id);toast_("Deleted.","error");}
 
-  function addClaim(d){setClaims(p=>[...p,{...d,id:uid()}]);toast_("Claim submitted");}
-  function claimAction(id,status,by,comment){setClaims(p=>p.map(c=>c.id===id?{...c,status,supervisorComment:c.status==="Pending Supervisor"?by:c.supervisorComment,hrComment:c.status==="Pending HR"?by:c.hrComment}:c));toast_(status,"success");}
-  function delClaim(id){setClaims(p=>p.filter(c=>c.id!==id));toast_("Deleted","error");}
-
+  // ── ATTENDANCE ────────────────────────────────────────────────────────────
   function clockAction(rec){
     const existing=attendance.find(a=>a.empId===rec.empId&&a.date===rec.date);
-    if(existing){setAttendance(p=>p.map(a=>a.id===existing.id?{...a,...rec,id:a.id}:a));}
-    else{setAttendance(p=>[...p,{...rec,id:uid()}]);}
-    toast_("Attendance recorded");
+    if(existing){fsUp('attendance',existing.id,{...rec,id:existing.id});}
+    else{fsAddId('attendance',{...rec});}
+    toast_("Attendance recorded.");
   }
 
-  function processPayroll(d){setPayroll(p=>[...p,d]);toast_("Payroll processed");}
-  function delPayroll(id){setPayroll(p=>p.filter(x=>x.id!==id));toast_("Deleted","error");}
-  function publishPayslip(id){setPayroll(p=>p.map(x=>x.id===id?{...x,status:"Published",publishedOn:todayStr()}:x));toast_("Payslip published to employee");}
+  // ── PAYROLL ───────────────────────────────────────────────────────────────
+  function processPayroll(d){fsAddId('payroll',{...d});toast_("Payroll processed.");}
+  function delPayroll(id){fsDel('payroll',id);toast_("Deleted.","error");}
+  function publishPayslip(id){fsUp('payroll',id,{status:"Published",publishedOn:todayStr()});toast_("Payslip published to employee.");}
 
-  const memoCrud=crud(setMemos,"Announcement saved");
-  const policyCrud=crud(setPolicies,"Policy saved");
-  const trainingCrud=crud(setTrainings,"Training saved");
-  const shiftCrud=crud(setShifts,"Shift saved");
-  const calCrud=crud(setCalEvents,"Event saved");
-  const appraisalFormCrud=crud(setAppraisalForms,"Form saved");
+  // ── MEMOS ─────────────────────────────────────────────────────────────────
+  function addMemo(d){fsAddId('memos',{...d,readBy:[]});toast_("Announcement posted.");}
+  function editMemo(id,d){fsUp('memos',id,d);toast_("Updated.");}
+  function delMemo(id){fsDel('memos',id);toast_("Deleted.","error");}
+  function readMemo(id){
+    const m=memos.find(x=>x.id===id);if(!m)return;
+    fsUp('memos',id,{readBy:[...(m.readBy||[]),empId]});
+  }
 
-  function readMemo(id){setMemos(p=>p.map(m=>m.id===id?{...m,readBy:[...m.readBy,empId]}:m));}
-  function replyFeedback(id,reply){setFeedbacks(p=>p.map(f=>f.id===id?{...f,adminReply:reply,status:"Closed"}:f));toast_("Reply sent");}
-  function addFeedbackSection(d){setFeedbackSections(p=>[...p,{...d,id:uid()}]);toast_("Category added");}
-  function editFeedbackSection(id,d){setFeedbackSections(p=>p.map(s=>s.id===id?{...s,...d,id}:s));toast_("Category updated");}
-  function delFeedbackSection(id){setFeedbackSections(p=>p.filter(s=>s.id!==id));toast_("Deleted","error");}
-  function addFeedback(d){setFeedbacks(p=>[...p,{...d,id:uid()}]);toast_("Feedback submitted");}
-  function saveAppraisalSub(d){setAppraisalSubs(p=>{const ex=p.find(s=>s.id===d.id);return ex?p.map(s=>s.id===d.id?d:s):[...p,d]});toast_("Appraisal saved");}
-  function editAppraisalForm(id,d){setAppraisalForms(p=>p.map(f=>f.id===id?{...f,...d,id}:f));toast_("Form updated");}
+  // ── POLICIES ──────────────────────────────────────────────────────────────
+  function addPolicy(d){fsAddId('policies',d);toast_("Policy added.");}
+  function editPolicy(id,d){fsUp('policies',id,d);toast_("Updated.");}
+  function delPolicy(id){fsDel('policies',id);toast_("Deleted.","error");}
 
-  const unreadMemos=memos.filter(m=>!m.readBy.includes(empId));
-  const showMemoPopup=!isAdminOrSup&&unreadMemos.length>0;
+  // ── TRAININGS ─────────────────────────────────────────────────────────────
+  function addTraining(d){fsAddId('trainings',d);toast_("Training added.");}
+  function editTraining(id,d){fsUp('trainings',id,d);toast_("Updated.");}
+  function delTraining(id){fsDel('trainings',id);toast_("Deleted.","error");}
 
+  // ── FEEDBACK ──────────────────────────────────────────────────────────────
+  function addFeedback(d){fsAddId('feedbacks',d);toast_("Feedback submitted.");}
+  function replyFeedback(id,reply){fsUp('feedbacks',id,{adminReply:reply,status:"Closed"});toast_("Reply sent.");}
+  function addFeedbackSection(d){fsAddId('feedbackSections',d);toast_("Category added.");}
+  function editFeedbackSection(id,d){fsUp('feedbackSections',id,d);toast_("Updated.");}
+  function delFeedbackSection(id){fsDel('feedbackSections',id);toast_("Deleted.","error");}
+
+  // ── APPRAISALS ────────────────────────────────────────────────────────────
+  function addAppraisalForm(d){fsAddId('appraisalForms',d);toast_("Form created.");}
+  function editAppraisalForm(id,d){fsUp('appraisalForms',id,d);toast_("Updated.");}
+  function delAppraisalForm(id){fsDel('appraisalForms',id);toast_("Deleted.","error");}
+  function saveAppraisalSub(d){
+    const ex=appraisalSubs.find(s=>s.formId===d.formId&&s.empId===d.empId);
+    if(ex){fsUp('appraisalSubs',ex.id,{...d,id:ex.id});}
+    else{fsAddId('appraisalSubs',d);}
+    toast_("Appraisal saved.");
+  }
+
+  // ── SHIFTS ────────────────────────────────────────────────────────────────
+  function addShift(d){fsAddId('shifts',d);toast_("Shift assigned.");}
+  function editShift(id,d){fsUp('shifts',id,d);toast_("Updated.");}
+  function delShift(id){fsDel('shifts',id);toast_("Deleted.","error");}
+
+  // ── CALENDAR ──────────────────────────────────────────────────────────────
+  function addCalEvent(d){fsAddId('calEvents',d);toast_("Event added.");}
+  function editCalEvent(id,d){fsUp('calEvents',id,d);toast_("Updated.");}
+  function delCalEvent(id){fsDel('calEvents',id);toast_("Deleted.","error");}
+
+  // ── PAGE RENDERER ─────────────────────────────────────────────────────────
   function renderPage(){
     if(!isAdminOrSup){
       switch(page){
@@ -1585,60 +1978,64 @@ export default function App(){
     }
     switch(page){
       case "dashboard":return <AdminDashboard employees={employees} leaves={leaves} claims={claims} attendance={attendance} announcements={memos} onNavigate={setPage} onLeaveAction={leaveAction} session={session} lang={lang}/>;
-      case "employees":return <EmpList employees={employees} leaves={leaves} onAdd={empCrud.add} onEdit={empCrud.edit} onDelete={empCrud.del} lang={lang}/>;
-      case "users":return <UserMgmt users={users} employees={employees} onAdd={userCrud.add} onEdit={userCrud.edit} onDelete={userCrud.del} onResetPw={userCrud.resetPw} lang={lang}/>;
-      case "attendance":return <AdminAttendance attendance={attendance} employees={employees} lang={lang}/>;
+      case "employees":return <EmpList employees={employees} leaves={leaves} onAdd={addEmp} onEdit={editEmp} onDelete={delEmp} lang={lang}/>;
+      case "users":return <UserMgmt users={users} employees={employees} onAdd={addUser} onEdit={editUser} onDelete={delUser} onResetPw={resetPw} lang={lang}/>;
+      case "attendance":return <AdminAttendance attendance={attendance} employees={employees} onAdd={clockAction} onEdit={(id,d)=>{const ex=attendance.find(a=>a.id===id);if(ex)clockAction({...ex,...d,id});}} onDelete={id=>{fsDel("attendance",id);toast_("Deleted.","error");}} lang={lang}/>;
       case "leaves":return <AdminLeave leaves={leaves} employees={employees} leaveTypes={leaveTypes} users={users} onAction={leaveAction} onAdd={addLeave} onDelete={delLeave} onAddType={addLT} onEditType={editLT} onDeleteType={delLT} session={session} lang={lang}/>;
       case "claims":return <AdminClaims claims={claims} employees={employees} users={users} session={session} onAction={claimAction} onDelete={delClaim} lang={lang}/>;
       case "payroll":return <AdminPayroll employees={employees} payroll={payroll} claims={claims} onProcess={processPayroll} onDelete={delPayroll} onPublish={publishPayslip} lang={lang}/>;
-      case "memo":return <AdminMemo memos={memos} onAdd={memoCrud.add} onEdit={memoCrud.edit} onDelete={memoCrud.del} session={session} lang={lang}/>;
-      case "policy":return <AdminPolicy policies={policies} onAdd={policyCrud.add} onEdit={policyCrud.edit} onDelete={policyCrud.del} session={session} lang={lang}/>;
-      case "training":return <AdminTraining trainings={trainings} employees={employees} onAdd={trainingCrud.add} onEdit={trainingCrud.edit} onDelete={trainingCrud.del} session={session} lang={lang}/>;
-      case "feedback":return <AdminFeedback feedbacks={feedbacks} sections={feedbackSections} employees={employees} onReply={replyFeedback} onDeleteFeedback={(id)=>setFeedbacks(p=>p.filter(f=>f.id!==id))} onAddSection={addFeedbackSection} onEditSection={editFeedbackSection} onDeleteSection={delFeedbackSection} lang={lang}/>;
-      case "appraisal":return <AdminAppraisal forms={appraisalForms} submissions={appraisalSubs} employees={employees} onAddForm={appraisalFormCrud.add} onEditForm={editAppraisalForm} onDeleteForm={appraisalFormCrud.del} onSaveSubmission={saveAppraisalSub} session={session} lang={lang}/>;
-      case "calendar":return <AdminCalendar events={calEvents} leaves={leaves} employees={employees} onAdd={calCrud.add} onEdit={calCrud.edit} onDelete={calCrud.del} session={session} lang={lang}/>;
-      case "shift":return <AdminShift shifts={shifts} employees={employees} onAdd={shiftCrud.add} onEdit={shiftCrud.edit} onDelete={shiftCrud.del} lang={lang}/>;
+      case "memo":return <AdminMemo memos={memos} onAdd={addMemo} onEdit={editMemo} onDelete={delMemo} session={session} lang={lang}/>;
+      case "policy":return <AdminPolicy policies={policies} onAdd={addPolicy} onEdit={editPolicy} onDelete={delPolicy} session={session} lang={lang}/>;
+      case "training":return <AdminTraining trainings={trainings} employees={employees} onAdd={addTraining} onEdit={editTraining} onDelete={delTraining} session={session} lang={lang}/>;
+      case "feedback":return <AdminFeedback feedbacks={feedbacks} sections={feedbackSections} employees={employees} onReply={replyFeedback} onDeleteFeedback={id=>fsDel('feedbacks',id)} onAddSection={addFeedbackSection} onEditSection={editFeedbackSection} onDeleteSection={delFeedbackSection} lang={lang}/>;
+      case "appraisal":return <AdminAppraisal forms={appraisalForms} submissions={appraisalSubs} employees={employees} onAddForm={addAppraisalForm} onEditForm={editAppraisalForm} onDeleteForm={delAppraisalForm} onSaveSubmission={saveAppraisalSub} session={session} lang={lang}/>;
+      case "calendar":return <AdminCalendar events={calEvents} leaves={leaves} employees={employees} onAdd={addCalEvent} onEdit={editCalEvent} onDelete={delCalEvent} session={session} lang={lang}/>;
+      case "shift":return <AdminShift shifts={shifts} employees={employees} onAdd={addShift} onEdit={editShift} onDelete={delShift} lang={lang}/>;
       default:return null;
     }
   }
 
-  return <div style={{display:"flex",height:"100vh",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,overflow:"hidden"}}>
-    {/* Sidebar */}
-    <aside style={{width:190,background:C.sidebar,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"}}>
-      <div style={{padding:"16px 14px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:32,height:32,background:C.accent,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>C.HR</div>
-          <div><div style={{color:"#fff",fontWeight:800,fontSize:13,lineHeight:1.1}}>Custera<span style={{color:"#60A5FA"}}>.HR</span></div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,marginTop:1}}>SG Construction</div></div>
+  // ── LAYOUT ────────────────────────────────────────────────────────────────
+  return(
+    <div style={{display:"flex",height:"100vh",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,overflow:"hidden"}}>
+      <aside style={{width:190,background:C.sidebar,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"}}>
+        <div style={{padding:"16px 14px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:32,height:32,background:C.accent,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>C.HR</div>
+            <div><div style={{color:"#fff",fontWeight:800,fontSize:13,lineHeight:1.1}}>Custera<span style={{color:"#60A5FA"}}>.HR</span></div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,marginTop:1}}>SG Construction</div></div>
+          </div>
+          <div style={{display:"flex",gap:4,marginTop:10}}>
+            {["en","zh"].map(l=><button key={l} onClick={()=>setLang(l)} style={{flex:1,background:lang===l?C.accent:"rgba(255,255,255,0.08)",color:lang===l?"#fff":"rgba(255,255,255,0.5)",border:"none",borderRadius:5,padding:"3px 0",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>{l==="en"?"EN":"中文"}</button>)}
+          </div>
         </div>
-        <div style={{display:"flex",gap:4,marginTop:10}}>
-          {["en","zh"].map(l=><button key={l} onClick={()=>setLang(l)} style={{flex:1,background:lang===l?C.accent:"rgba(255,255,255,0.08)",color:lang===l?"#fff":"rgba(255,255,255,0.5)",border:"none",borderRadius:5,padding:"3px 0",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>{l==="en"?"EN":"中文"}</button>)}
+        <nav style={{flex:1,padding:"8px 6px"}}>
+          {NAV.map(n=>{const active=page===n.id;return(
+            <button key={n.id} onClick={()=>setPage(n.id)}
+              style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:"none",background:active?C.sidebarA:"transparent",color:active?"#93C5FD":C.sidebarT,fontWeight:active?700:500,fontSize:12,cursor:"pointer",marginBottom:1,textAlign:"left",fontFamily:"inherit"}}
+              onMouseEnter={e=>{if(!active)e.currentTarget.style.background="rgba(255,255,255,0.07)";}}
+              onMouseLeave={e=>{if(!active)e.currentTarget.style.background="transparent";}}>
+              <span style={{width:18,height:18,background:"rgba(255,255,255,0.1)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0}}>{n.icon}</span>
+              {t(lang,n.l)}
+              {n.id==="memo"&&!isAdminOrSup&&unreadMemos.length>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:9,fontWeight:800,borderRadius:99,padding:"1px 5px",flexShrink:0}}>{unreadMemos.length}</span>}
+            </button>
+          );})}
+        </nav>
+        <div style={{padding:"10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <Avatar name={session.name} size={26}/>
+            <div style={{flex:1,overflow:"hidden"}}><div style={{color:"#fff",fontWeight:600,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{session.name}</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,textTransform:"capitalize"}}>{session.role==="superadmin"?"Super Admin":session.role}</div></div>
+          </div>
+          <button onClick={()=>setSession(null)} style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"5px",color:"rgba(255,255,255,0.5)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{t(lang,"signOut")}</button>
         </div>
-      </div>
-      <nav style={{flex:1,padding:"8px 6px"}}>
-        {NAV.map(n=>{const active=page===n.id;return <button key={n.id} onClick={()=>setPage(n.id)}
-          style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 9px",borderRadius:7,border:"none",background:active?C.sidebarA:"transparent",color:active?"#93C5FD":C.sidebarT,fontWeight:active?700:500,fontSize:12,cursor:"pointer",marginBottom:1,textAlign:"left",fontFamily:"inherit"}}
-          onMouseEnter={e=>{if(!active)e.currentTarget.style.background="rgba(255,255,255,0.07)";}}
-          onMouseLeave={e=>{if(!active)e.currentTarget.style.background="transparent";}}>
-          <span style={{width:18,height:18,background:"rgba(255,255,255,0.1)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0}}>{n.icon}</span>
-          {t(lang,n.l)}
-          {n.id==="memo"&&!isAdminOrSup&&unreadMemos.length>0&&<span style={{marginLeft:"auto",background:C.danger,color:"#fff",fontSize:9,fontWeight:800,borderRadius:99,padding:"1px 5px",flexShrink:0}}>{unreadMemos.length}</span>}
-        </button>;})}
-      </nav>
-      <div style={{padding:"10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
-        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-          <Avatar name={session.name} size={26}/>
-          <div style={{flex:1,overflow:"hidden"}}><div style={{color:"#fff",fontWeight:600,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{session.name}</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,textTransform:"capitalize"}}>{session.role==="superadmin"?"Super Admin":session.role}</div></div>
-        </div>
-        <button onClick={()=>setSession(null)} style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"none",borderRadius:6,padding:"5px",color:"rgba(255,255,255,0.5)",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{t(lang,"signOut")}</button>
-      </div>
-    </aside>
-    <main style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>{renderPage()}</main>
-    {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
-    {showMemoPopup&&<MemoPopup memos={memos} empId={empId} lang={lang} onRead={readMemo} onClose={()=>readMemo(unreadMemos[0].id)}/>}
-  </div>;
+      </aside>
+      <main style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>{renderPage()}</main>
+      {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
+      {showMemoPopup&&<MemoPopup memos={memos} empId={empId} lang={lang} onRead={readMemo} onClose={()=>readMemo(unreadMemos[0].id)}/>}
+    </div>
+  );
 }
 
-// Placeholder employee list for admin (reuse from previous version)
+
 function EmpList({employees,leaves,onAdd,onEdit,onDelete,lang}){
   const [search,setSearch]=useState("");
   const [confirmId,setConfirmId]=useState(null);
