@@ -8,16 +8,19 @@ const db=getFirestore(fbApp);
 import * as XLSX from "xlsx";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
+// ─── MODERN THEME ─────────────────────────────────────────────────────────────
 const C = {
-  sidebar:"#1A2340", sidebarA:"rgba(59,130,246,0.22)", sidebarT:"rgba(255,255,255,0.6)",
-  accent:"#2563EB", accentL:"#EFF6FF", accentT:"#1D4ED8",
-  bg:"#F0F2F5", card:"#FFFFFF", text:"#0F172A", muted:"#64748B", border:"#E2E8F0",
-  success:"#059669", successL:"#D1FAE5", successD:"#065F46",
-  warning:"#D97706", warningL:"#FEF3C7", warningD:"#92400E",
-  danger:"#DC2626", dangerL:"#FEE2E2", dangerD:"#991B1B",
-  purple:"#7C3AED", purpleL:"#EDE9FE",
-  orange:"#EA580C", orangeL:"#FFEDD5",
-  teal:"#0D9488", tealL:"#CCFBF1",
+  sidebar:"#0F172A", sidebarA:"rgba(99,102,241,0.18)", sidebarT:"rgba(148,163,184,0.85)",
+  accent:"#6366F1", accentL:"#EEF2FF", accentT:"#4338CA",
+  bg:"#F1F5F9", card:"#FFFFFF", text:"#0F172A", muted:"#64748B", border:"#E2E8F0",
+  success:"#10B981", successL:"#D1FAE5", successD:"#065F46",
+  warning:"#F59E0B", warningL:"#FEF3C7", warningD:"#92400E",
+  danger:"#EF4444", dangerL:"#FEE2E2", dangerD:"#991B1B",
+  purple:"#8B5CF6", purpleL:"#EDE9FE",
+  orange:"#F97316", orangeL:"#FFEDD5",
+  teal:"#14B8A6", tealL:"#CCFBF1",
+  pink:"#EC4899", pinkL:"#FCE7F3",
+  navy:"#1E3A5F",
 };
 
 // ─── BILINGUAL TRANSLATIONS ───────────────────────────────────────────────────
@@ -129,23 +132,22 @@ const SUPER_ADMIN = {
 
 const INIT_USERS = [
   SUPER_ADMIN,
-  { id:"u1", username:"admin", password:"admin123", role:"admin", name:"HR Admin (Clara)", empId:"C010", dept:"HR & Admin.", reportingOfficerId:"", active:true },
-  { id:"u2", username:"zou", password:"zou123", role:"supervisor", name:"ZOU LI", empId:"C006", dept:"HR & Admin.", reportingOfficerId:"u1", active:true },
-  { id:"u3", username:"willie", password:"willie123", role:"employee", name:"ANG Hwee Lee, Willie", empId:"C001", dept:"Management", reportingOfficerId:"u1", active:true },
-  { id:"u4", username:"ge", password:"ge123", role:"employee", name:"GE Qiu Zhang", empId:"C002", dept:"Engineering & Operations", reportingOfficerId:"u2", active:true },
-  { id:"u5", username:"tang", password:"tang123", role:"employee", name:"TANG Chin Yeon", empId:"C004", dept:"Business Development", reportingOfficerId:"u2", active:true },
+  { id:"u1", username:"admin", password:"admin123", role:"admin", name:"HR Admin", empId:"C010", dept:"HR & Admin.", reportingOfficerId:"", active:true },
+  { id:"u2", username:"hrsuper", password:"super123", role:"supervisor", name:"GOH Siew Ling", empId:"C006", dept:"HR & Admin.", reportingOfficerId:"u1", active:true },
+  { id:"u3", username:"staff1", password:"staff123", role:"employee", name:"TAN Wei Jie", empId:"C001", dept:"Management", reportingOfficerId:"u1", active:true },
+  { id:"u4", username:"staff2", password:"staff234", role:"employee", name:"CHEN Jun Hao", empId:"C002", dept:"Engineering & Operations", reportingOfficerId:"u2", active:true },
+  { id:"u5", username:"staff3", password:"staff345", role:"employee", name:"LIM Wee Kiat", empId:"C004", dept:"Business Development", reportingOfficerId:"u2", active:true },
+];const INIT_EMPLOYEES = [
+  {id:"C001",name:"TAN Wei Jie",fin:"S7812340A",company:"STEC",position:"Chief Executive Officer",department:"Management",dateJoined:"2011-05-01",gender:"M",dob:"1973-06-15",nationality:"Singaporean",workPass:"SC",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"K1234567A",passportIssueDate:"2020-01-15",passportExpiryDate:"2030-01-15",probationEndDate:"",qualification:"Bachelor of Civil Engineering, NUS",mobile:"9111 2222",residenceAddress:"Blk 123 Woodlands Drive 14, #05-01, Singapore 730123",personalEmail:"tanweijie@gmail.com",workEmail:"weijie@stec.com.sg",bankName:"DBS",bankAccount:"012-3-456789",emergencyContactName:"LIM Mei Hua",emergencyContactPhone:"9333 4444",emergencyContactRelation:"Spouse",phoneAllowance:0,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:0,allowance:0,annualLeave:14,status:"Active",site:"HQ",lastWorkingDay:""},
+  {id:"C002",name:"CHEN Jun Hao",fin:"M4623450U",company:"Custera",position:"Chief Engineering & Operations Officer",department:"Engineering & Operations",dateJoined:"2026-01-27",gender:"M",dob:"1982-08-20",nationality:"Chinese",workPass:"EP",epSpNo:"M4623450U",workPassIssueDate:"2026-01-31",workPassExpiryDate:"2028-01-30",passportNumber:"PE3312345",passportIssueDate:"2022-03-06",passportExpiryDate:"2032-03-06",probationEndDate:"2026-04-27",qualification:"Master of Structural Engineering",mobile:"8982 3456",residenceAddress:"Blk 80 Compassvale Bow #08-40, Singapore 544570",personalEmail:"chenjh82@gmail.com",workEmail:"jh.chen@custera.com.sg",bankName:"DBS",bankAccount:"272-9-123456",emergencyContactName:"WANG Fang",emergencyContactPhone:"8234 5678",emergencyContactRelation:"Spouse",phoneAllowance:100,housingAllowance:800,airfareAllowance:1200,otherAllowance:100,basicSalary:8400,allowance:2200,annualLeave:14,status:"Active",site:"Tuas Site",lastWorkingDay:""},
+  {id:"C004",name:"LIM Wee Kiat",fin:"S9779500I",company:"UTEC",position:"Business Development Engineer",department:"Business Development",dateJoined:"2022-02-01",gender:"M",dob:"1997-04-08",nationality:"Malaysian",workPass:"SPR",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"K5498396",passportIssueDate:"2021-12-06",passportExpiryDate:"2031-12-06",probationEndDate:"2022-08-01",qualification:"Bachelor of Mechanical Engineering, UTM",mobile:"8542 1234",residenceAddress:"APT BLK 280B Sengkang East Ave #15-629, Singapore 542280",personalEmail:"limwk97@gmail.com",workEmail:"weekiat@utec.com.sg",bankName:"DBS",bankAccount:"271-0-614500",emergencyContactName:"LIM Ah Kow",emergencyContactPhone:"9183 7826",emergencyContactRelation:"Father",phoneAllowance:50,housingAllowance:0,airfareAllowance:0,otherAllowance:50,basicSalary:4500,allowance:500,annualLeave:14,status:"Active",site:"Jurong Site",lastWorkingDay:""},
+  {id:"C005",name:"RAHMAN Bin Aziz",fin:"S9686150F",company:"UTEC",position:"Site Engineer",department:"Engineering & Operations",dateJoined:"2022-04-01",gender:"M",dob:"1996-09-28",nationality:"Malaysian",workPass:"SPR",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"A5541790",passportIssueDate:"2021-08-20",passportExpiryDate:"2031-08-20",probationEndDate:"2022-10-01",qualification:"Diploma in Civil Engineering",mobile:"9340 2222",residenceAddress:"Blk 13 Cantonment Close #26-29, Singapore 080013",personalEmail:"rahmanaziz96@gmail.com",workEmail:"rahman@utec.com.sg",bankName:"DBS",bankAccount:"271-1-397500",emergencyContactName:"SITI Binte Aziz",emergencyContactPhone:"8540 4034",emergencyContactRelation:"Sister",phoneAllowance:50,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:4200,allowance:400,annualLeave:14,status:"Active",site:"Tuas Site",lastWorkingDay:""},
+  {id:"C006",name:"GOH Siew Ling",fin:"S7579860D",company:"STEC",position:"Assistant Admin Manager",department:"HR & Admin.",dateJoined:"2025-10-15",gender:"F",dob:"1975-03-28",nationality:"Singaporean",workPass:"SC",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"K7654321B",passportIssueDate:"2021-05-10",passportExpiryDate:"2031-05-10",probationEndDate:"2026-04-15",qualification:"Diploma in Business Administration",mobile:"9748 5678",residenceAddress:"53 Serangoon Terrace, Singapore 535787",personalEmail:"gohsiewling@gmail.com",workEmail:"siewling@stec.com.sg",bankName:"OCBC",bankAccount:"512-3-456789",emergencyContactName:"GOH Ah Beng",emergencyContactPhone:"9234 5678",emergencyContactRelation:"Spouse",phoneAllowance:50,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:4800,allowance:100,annualLeave:14,status:"Active",site:"HQ",lastWorkingDay:""},
+  {id:"C010",name:"TAN Li Fen",fin:"T0112340H",company:"STEC",position:"HR cum Admin Executive",department:"HR & Admin.",dateJoined:"2026-01-19",gender:"F",dob:"2001-03-15",nationality:"Singaporean",workPass:"SC",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"K4382218H",passportIssueDate:"2023-09-10",passportExpiryDate:"2033-09-10",probationEndDate:"2026-07-19",qualification:"Diploma in Human Resource Management",mobile:"9053 1234",residenceAddress:"201 Marsiling Drive #07-112, Singapore 730201",personalEmail:"tanlf01@gmail.com",workEmail:"lifen@stec.com.sg",bankName:"UOB",bankAccount:"453-3-006350",emergencyContactName:"TAN Ah Kow",emergencyContactPhone:"8286 1234",emergencyContactRelation:"Father",phoneAllowance:50,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:3500,allowance:50,annualLeave:14,status:"Active",site:"HQ",lastWorkingDay:""},
+  {id:"C011",name:"CHONG Ah Mui",fin:"S1218010A",company:"STEC",position:"Pantry Assistant",department:"Admin",dateJoined:"2026-03-19",gender:"F",dob:"1956-01-08",nationality:"Singaporean",workPass:"SC",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"",passportIssueDate:"",passportExpiryDate:"",probationEndDate:"2026-09-19",qualification:"PSLE",mobile:"8803 1570",residenceAddress:"Blk 320 Jurong East St #07-72, Singapore 600320",personalEmail:"chongahmui@gmail.com",workEmail:"ahmui@stec.com.sg",bankName:"POSB",bankAccount:"151-0-740300",emergencyContactName:"NG Ah Kow",emergencyContactPhone:"9684 0870",emergencyContactRelation:"Son",phoneAllowance:0,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:1900,allowance:0,annualLeave:7,status:"Active",site:"HQ",lastWorkingDay:""},
+  {id:"C012",name:"HASSAN Bin Ahmad",fin:"S8268790Z",company:"STEC",position:"Quantity Surveyor",department:"Commercial",dateJoined:"2026-05-01",gender:"M",dob:"1982-06-10",nationality:"Malaysian",workPass:"SPR",epSpNo:"",workPassIssueDate:"",workPassExpiryDate:"",passportNumber:"A1234567",passportIssueDate:"2020-01-01",passportExpiryDate:"2030-01-01",probationEndDate:"2026-11-01",qualification:"Bachelor of Quantity Surveying, UTM",mobile:"9027 9197",residenceAddress:"357A Admiralty Drive, Singapore 751357",personalEmail:"hassanahmad@gmail.com",workEmail:"hassan@stec.com.sg",bankName:"Maybank",bankAccount:"5040-1234-5678",emergencyContactName:"SITI Norbaya",emergencyContactPhone:"8533 9813",emergencyContactRelation:"Spouse",phoneAllowance:50,housingAllowance:0,airfareAllowance:0,otherAllowance:0,basicSalary:5000,allowance:50,annualLeave:14,status:"Active",site:"Jurong Site",lastWorkingDay:""},
 ];
-
-const INIT_EMPLOYEES = [
-  { id:"C001",name:"ANG Hwee Lee, Willie",fin:"S7340234D",company:"STEC",position:"CEO",department:"Management",dateJoined:"2011-05-01",gender:"M",dob:"1973-11-05",nationality:"Singaporean",workPass:"SC",epExpiry:"",passportNo:"K4580555H",passportExpiry:"2033-12-24",mobile:"9688 2560",address:"321 Choa Chu Kang Ave 3 #11-21",postal:"689864",marital:"Divorced",basicSalary:0,allowance:0,bankName:"OCBC",bankAccount:"6952 3635 6001",annualLeave:14,status:"Active",site:"HQ" },
-  { id:"C002",name:"GE Qiu Zhang",fin:"M4624560U",company:"Custera",position:"Chief Engineering Officer",department:"Engineering & Operations",dateJoined:"2026-01-27",gender:"M",dob:"1982-10-20",nationality:"Chinese",workPass:"EP",epExpiry:"2028-01-30",passportNo:"PE3315687",passportExpiry:"2030-03-06",mobile:"8982 2219",address:"Blk 80 Compassvale Bow #08-40",postal:"544570",marital:"",basicSalary:8400,allowance:2200,bankName:"DBS",bankAccount:"2729124560",annualLeave:14,status:"Active",site:"Tuas Site" },
-  { id:"C004",name:"TANG Chin Yeon",fin:"S9779502I",company:"UTEC",position:"BD Engineer",department:"Business Development",dateJoined:"2022-02-01",gender:"M",dob:"1997-07-08",nationality:"Malaysian",workPass:"SPR",epExpiry:"",passportNo:"K54983963",passportExpiry:"2031-12-06",mobile:"8542 5468",address:"APT BLK 280B Sengkang East Ave #15-629",postal:"542280",marital:"Single",basicSalary:4500,allowance:500,bankName:"DBS",bankAccount:"2710614542",annualLeave:14,status:"Active",site:"Jurong Site" },
-  { id:"C005",name:"CHUA Cheng Yi",fin:"S9686151F",company:"UTEC",position:"Site Engineer",department:"Engineering & Operations",dateJoined:"2022-04-01",gender:"M",dob:"1996-07-28",nationality:"Malaysian",workPass:"SPR",epExpiry:"",passportNo:"A55417959",passportExpiry:"2031-08-20",mobile:"9340 2639",address:"Blk 13 Cantonment Close #26-29",postal:"080013",marital:"Single",basicSalary:4200,allowance:400,bankName:"DBS",bankAccount:"2711397501",annualLeave:14,status:"Active",site:"Tuas Site" },
-  { id:"C006",name:"ZOU LI",fin:"S7579864D",company:"STEC",position:"Asst Admin Manager",department:"HR & Admin.",dateJoined:"2025-10-15",gender:"F",dob:"1975-05-28",nationality:"Singaporean",workPass:"SC",epExpiry:"",passportNo:"",passportExpiry:"",mobile:"9748 8442",address:"53 Serangoon Terrace",postal:"535787",marital:"Married",basicSalary:4800,allowance:100,bankName:"OCBC",bankAccount:"",annualLeave:14,status:"Active",site:"HQ" },
-  { id:"C010",name:"YANG Zi Qing, Clara",fin:"T0112349H",company:"STEC",position:"HR cum Admin Exec",department:"HR & Admin.",dateJoined:"2026-01-19",gender:"F",dob:"2001-03-28",nationality:"Singaporean",workPass:"SC",epExpiry:"",passportNo:"K4382218H",passportExpiry:"2033-09-10",mobile:"9053 2999",address:"201 Marsiling Drive #07-112",postal:"730201",marital:"Single",basicSalary:3500,allowance:50,bankName:"UOB",bankAccount:"453-300-635-8",annualLeave:14,status:"Active",site:"HQ" },
-  { id:"C011",name:"LAU Ah Kwai",fin:"S1218010A",company:"STEC",position:"Pantry Assistant",department:"Admin",dateJoined:"2026-03-19",gender:"F",dob:"1956-01-08",nationality:"Singaporean",workPass:"SC",epExpiry:"",passportNo:"",passportExpiry:"",mobile:"88031570",address:"Blk 320 Jurong East St #07-72",postal:"600320",marital:"Married",basicSalary:1900,allowance:0,bankName:"POSB",bankAccount:"151-07403-0",annualLeave:7,status:"Active",site:"HQ" },
-  { id:"C012",name:"TEE Siang Long",fin:"S8268798Z",company:"STEC",position:"Quantity Surveyor",department:"Commercial",dateJoined:"2026-05-01",gender:"M",dob:"1982-06-10",nationality:"Malaysian",workPass:"SPR",epExpiry:"",passportNo:"",passportExpiry:"",mobile:"9027 9197",address:"357A Admiralty Drive",postal:"751357",marital:"Married",basicSalary:5000,allowance:50,bankName:"",bankAccount:"",annualLeave:14,status:"Active",site:"Jurong Site" },
-];
+;
 
 const SG_LEAVE_TYPES = [
   {name:"Annual Leave",days:14,paid:true},{name:"Medical Leave",days:14,paid:true},
@@ -258,94 +260,112 @@ function avC(s){let h=0;for(let c of(s||""))h=(h*31+c.charCodeAt(0))&0xffff;retu
 function initials(n){return(n||"?").split(/[\s,]+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();}
 function Avatar({name,size=36}){return <div style={{width:size,height:size,borderRadius:"50%",background:avC(name),color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.36,fontWeight:700,flexShrink:0,userSelect:"none"}}>{initials(name)}</div>;}
 
-const STATUS_STYLES={Active:{bg:C.successL,c:C.successD},"On Leave":{bg:C.warningL,c:C.warningD},Present:{bg:C.successL,c:C.successD},Absent:{bg:C.dangerL,c:C.dangerD},Pending:{bg:C.warningL,c:C.warningD},Approved:{bg:C.successL,c:C.successD},Rejected:{bg:C.dangerL,c:C.dangerD},"Pending Supervisor":{bg:"#FEF3C7",c:"#92400E"},"Pending HR":{bg:C.purpleL,c:C.purple},Published:{bg:C.successL,c:C.successD},Draft:{bg:"#F1F5F9",c:"#475569"},Processed:{bg:C.tealL,c:C.teal},Upcoming:{bg:C.accentL,c:C.accentT},Completed:{bg:C.successL,c:C.successD},Cancelled:{bg:C.dangerL,c:C.dangerD},Open:{bg:C.warningL,c:C.warningD},Closed:{bg:"#F1F5F9",c:"#475569"},Inactive:{bg:"#F1F5F9",c:"#475569"},SC:{bg:"#DBEAFE",c:"#1E40AF"},SPR:{bg:"#E0E7FF",c:"#3730A3"},EP:{bg:C.warningL,c:C.warningD},WP:{bg:"#FCE7F3",c:"#9D174D"},superadmin:{bg:C.dangerL,c:C.dangerD},admin:{bg:"#DBEAFE",c:"#1E40AF"},supervisor:{bg:C.purpleL,c:C.purple},employee:{bg:"#F1F5F9",c:"#475569"},Safety:{bg:C.dangerL,c:C.dangerD},Holiday:{bg:C.warningL,c:C.warningD},Policy:{bg:C.purpleL,c:C.purple},General:{bg:C.accentL,c:C.accentT},Compliance:{bg:C.orangeL,c:C.orange},Urgent:{bg:C.dangerL,c:C.dangerD}};
-function Badge({s}){const st=STATUS_STYLES[s]||{bg:"#F1F5F9",c:"#475569"};return <span style={{background:st.bg,color:st.c,borderRadius:99,padding:"2px 10px",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{s||"-"}</span>;}
+function Card({children,style={},onClick,glass=false}){
+  const [h,sH]=useState(false);
+  return<div onClick={onClick} onMouseEnter={()=>onClick&&sH(true)} onMouseLeave={()=>onClick&&sH(false)}
+    style={{background:glass?"rgba(255,255,255,0.85)":C.card,backdropFilter:glass?"blur(12px)":"none",borderRadius:16,border:`1px solid ${h?C.accent+"55":C.border}`,padding:"18px 22px",boxShadow:h?"0 8px 32px rgba(99,102,241,0.13)":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.18s ease",...(onClick?{cursor:"pointer"}:{}),...style}}>{children}</div>;
+}
+function PageTitle({title,sub,actions}){
+  return<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:20}}>
+    <div><h1 style={{fontSize:20,fontWeight:800,margin:0,color:C.text,letterSpacing:"-0.02em"}}>{title}</h1>{sub&&<p style={{color:C.muted,fontSize:13,margin:"3px 0 0"}}>{sub}</p>}</div>
+    {actions&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{actions}</div>}
+  </div>;
+}
+function SecTitle({children,icon}){
+  return<div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+    {icon&&<span style={{fontSize:13}}>{icon}</span>}{children}
+  </div>;
+}
 
-function Card({children,style={},onClick}){return <div onClick={onClick} style={{background:C.card,borderRadius:12,border:`1px solid ${C.border}`,padding:"18px 22px",...(onClick?{cursor:"pointer"}:{}),...style}}>{children}</div>;}
-function PageTitle({title,sub,actions}){return <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}><div><h1 style={{fontSize:19,fontWeight:800,margin:0,color:C.text}}>{title}</h1>{sub&&<p style={{color:C.muted,fontSize:13,margin:"2px 0 0"}}>{sub}</p>}</div>{actions&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{actions}</div>}</div>;}
-function SecTitle({children}){return <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>{children}</div>;}
-
-function StatCard({label,value,sub,icon,color}){return <Card style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:130,padding:"14px 18px"}}><div style={{width:44,height:44,borderRadius:10,background:color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color,flexShrink:0}}>{icon}</div><div><div style={{fontSize:22,fontWeight:800,color:C.text,lineHeight:1}}>{value}</div><div style={{fontSize:12,color:C.muted,marginTop:2}}>{label}</div>{sub&&<div style={{fontSize:11,color,marginTop:1,fontWeight:600}}>{sub}</div>}</div></Card>;}
+function StatCard({label,value,sub,icon,color,onClick}){
+  const [h,sH]=useState(false);
+  return<div onClick={onClick} onMouseEnter={()=>onClick&&sH(true)} onMouseLeave={()=>onClick&&sH(false)}
+    style={{background:C.card,borderRadius:16,border:`1px solid ${h?color+"55":C.border}`,padding:"18px 20px",boxShadow:h?`0 8px 24px ${color}22`:"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.18s",flex:1,minWidth:130,cursor:onClick?"pointer":"default"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+      <div><div style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>{label}</div>
+      <div style={{fontSize:26,fontWeight:900,color:C.text,lineHeight:1,letterSpacing:"-0.02em"}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color,marginTop:5,fontWeight:600}}>{sub}</div>}</div>
+      <div style={{width:46,height:46,borderRadius:13,background:`linear-gradient(135deg,${color}25,${color}10)`,border:`1.5px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:19,flexShrink:0}}>{icon}</div>
+    </div>
+  </div>;
+}
 
 function Btn({children,onClick,v="primary",sm=false,style={},disabled=false}){
-  const base={border:"none",borderRadius:7,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.6:1,fontSize:sm?12:13,padding:sm?"4px 11px":"8px 16px",fontFamily:"inherit",whiteSpace:"nowrap",...style};
-  const V={primary:{background:C.accent,color:"#fff"},danger:{background:C.danger,color:"#fff"},ghost:{background:"transparent",color:C.muted,border:`1px solid ${C.border}`},success:{background:C.success,color:"#fff"},outline:{background:"transparent",color:C.accent,border:`1px solid ${C.accent}`},warning:{background:C.warning,color:"#fff"},teal:{background:C.teal,color:"#fff"},purple:{background:C.purple,color:"#fff"}};
-  return <button disabled={disabled} onClick={e=>{e.stopPropagation();onClick&&onClick(e);}} style={{...base,...V[v]||V.primary}}>{children}</button>;
+  const base={border:"none",borderRadius:10,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,fontSize:sm?11:13,padding:sm?"5px 13px":"9px 18px",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.15s",letterSpacing:"0.01em",...style};
+  const V={
+    primary:{background:`linear-gradient(135deg,${C.accent} 0%,${C.accentT} 100%)`,color:"#fff",boxShadow:"0 2px 8px rgba(99,102,241,0.28)"},
+    danger:{background:`linear-gradient(135deg,${C.danger} 0%,#b91c1c 100%)`,color:"#fff",boxShadow:"0 2px 6px rgba(239,68,68,0.22)"},
+    ghost:{background:"rgba(0,0,0,0.03)",color:C.muted,border:`1px solid ${C.border}`},
+    success:{background:`linear-gradient(135deg,${C.success} 0%,#047857 100%)`,color:"#fff",boxShadow:"0 2px 6px rgba(16,185,129,0.22)"},
+    outline:{background:"transparent",color:C.accent,border:`1.5px solid ${C.accent}`},
+    warning:{background:`linear-gradient(135deg,${C.warning} 0%,#d97706 100%)`,color:"#fff",boxShadow:"0 2px 6px rgba(245,158,11,0.22)"},
+    teal:{background:`linear-gradient(135deg,${C.teal} 0%,#0d9488 100%)`,color:"#fff",boxShadow:"0 2px 6px rgba(20,184,166,0.22)"},
+    purple:{background:`linear-gradient(135deg,${C.purple} 0%,#7c3aed 100%)`,color:"#fff",boxShadow:"0 2px 6px rgba(139,92,246,0.22)"},
+  };
+  return<button disabled={disabled} onClick={e=>{e.stopPropagation();onClick&&onClick(e);}} style={{...base,...(V[v]||V.primary)}}>{children}</button>;
 }
 
-const IS={border:`1px solid ${C.border}`,borderRadius:7,padding:"7px 11px",fontSize:13,outline:"none",background:"#fff",color:C.text,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
+const IS={border:`1px solid ${C.border}`,borderRadius:10,padding:"8px 12px",fontSize:13,outline:"none",background:"#fff",color:C.text,width:"100%",boxSizing:"border-box",fontFamily:"inherit",transition:"border-color 0.15s",};
 function Inp({label,value,onChange,type="text",placeholder="",required=false,error="",readOnly=false,rows}){
+  const [foc,setFoc]=useState(false);
   const ctrl=rows
-    ?<textarea value={value||""} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{...IS,resize:"vertical"}}/>
-    :<input type={type} value={value||""} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} style={{...IS,border:`1px solid ${error?C.danger:C.border}`,background:readOnly?"#F8FAFC":"#fff"}}/>;
-  return <div style={{display:"flex",flexDirection:"column",gap:3}}>{label&&<label style={{fontSize:12,fontWeight:600,color:C.muted}}>{label}{required&&<span style={{color:C.danger}}> *</span>}</label>}{ctrl}{error&&<span style={{fontSize:11,color:C.danger}}>{error}</span>}</div>;
+    ?<textarea value={value||""} onFocus={()=>setFoc(true)} onBlur={()=>setFoc(false)} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{...IS,resize:"vertical",border:`1px solid ${error?C.danger:foc?C.accent:C.border}`}}/>
+    :<input type={type} value={value||""} onFocus={()=>setFoc(true)} onBlur={()=>setFoc(false)} onChange={e=>onChange&&onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} style={{...IS,border:`1px solid ${error?C.danger:foc?C.accent:C.border}`,background:readOnly?"#F8FAFC":"#fff"}}/>;
+  return<div style={{display:"flex",flexDirection:"column",gap:4}}>{label&&<label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}{required&&<span style={{color:C.danger}}> *</span>}</label>}{ctrl}{error&&<span style={{fontSize:11,color:C.danger}}>{error}</span>}</div>;
 }
-function Sel({label,value,onChange,options,required=false}){return <div style={{display:"flex",flexDirection:"column",gap:3}}>{label&&<label style={{fontSize:12,fontWeight:600,color:C.muted}}>{label}{required&&<span style={{color:C.danger}}> *</span>}</label>}<select value={value||""} onChange={e=>onChange&&onChange(e.target.value)} style={IS}><option value="">- Select -</option>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.v} value={o.v}>{o.l}</option>)}</select></div>;}
-function Grid({cols=2,children,style={}}){return <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"12px 14px",...style}}>{children}</div>;}
-function FormSection({title,children}){return <div style={{marginBottom:18}}><div style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:9,paddingBottom:5,borderBottom:`1px solid ${C.border}`}}>{title}</div>{children}</div>;}
+function Sel({label,value,onChange,options,required=false}){
+  return<div style={{display:"flex",flexDirection:"column",gap:4}}>{label&&<label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}{required&&<span style={{color:C.danger}}> *</span>}</label>}<select value={value||""} onChange={e=>onChange&&onChange(e.target.value)} style={{...IS}}><option value="">— Select —</option>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.v} value={o.v}>{o.l}</option>)}</select></div>;
+}
+function Grid({cols=2,children,style={}}){return<div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:"12px 16px",...style}}>{children}</div>;}
+function FormSection({title,icon,children}){
+  return<div style={{marginBottom:20}}>
+    <div style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10,paddingBottom:8,borderBottom:`2px solid ${C.accentL}`,display:"flex",alignItems:"center",gap:6}}>
+      {icon&&<span style={{fontSize:14}}>{icon}</span>}{title}
+    </div>{children}
+  </div>;
+}
 
-function Modal({title,onClose,children,width=560}){return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}><div style={{background:C.card,borderRadius:14,width:"100%",maxWidth:width,maxHeight:"93vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.2)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 22px 12px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.card,zIndex:1}}><h2 style={{margin:0,fontSize:15,fontWeight:800,color:C.text}}>{title}</h2><button onClick={onClose} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:C.muted,lineHeight:1,padding:0}}>x</button></div><div style={{padding:"18px 22px"}}>{children}</div></div></div>;}
+const STATUS_STYLES={Active:{bg:"#D1FAE5",c:"#059669",dot:"#10B981"},"On Leave":{bg:"#FEF3C7",c:"#D97706",dot:"#F59E0B"},Present:{bg:"#D1FAE5",c:"#059669",dot:"#10B981"},Absent:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"},Pending:{bg:"#FEF3C7",c:"#D97706",dot:"#F59E0B"},Approved:{bg:"#D1FAE5",c:"#059669",dot:"#10B981"},Rejected:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"},"Pending Supervisor":{bg:"#FEF3C7",c:"#B45309",dot:"#F59E0B"},"Pending HR":{bg:"#EDE9FE",c:"#7C3AED",dot:"#8B5CF6"},Published:{bg:"#D1FAE5",c:"#059669",dot:"#10B981"},Draft:{bg:"#F1F5F9",c:"#64748B",dot:"#94A3B8"},Processed:{bg:"#CCFBF1",c:"#14B8A6",dot:"#14B8A6"},Upcoming:{bg:"#EEF2FF",c:"#6366F1",dot:"#6366F1"},Completed:{bg:"#D1FAE5",c:"#059669",dot:"#10B981"},Cancelled:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"},Open:{bg:"#FEF3C7",c:"#D97706",dot:"#F59E0B"},Closed:{bg:"#F1F5F9",c:"#64748B",dot:"#94A3B8"},Inactive:{bg:"#F1F5F9",c:"#64748B",dot:"#94A3B8"},SC:{bg:"#DBEAFE",c:"#1D4ED8",dot:"#3B82F6"},SPR:{bg:"#EDE9FE",c:"#7C3AED",dot:"#8B5CF6"},EP:{bg:"#FEF3C7",c:"#D97706",dot:"#F59E0B"},WP:{bg:"#FCE7F3",c:"#DB2777",dot:"#EC4899"},superadmin:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"},admin:{bg:"#DBEAFE",c:"#1D4ED8",dot:"#3B82F6"},supervisor:{bg:"#EDE9FE",c:"#8B5CF6",dot:"#8B5CF6"},employee:{bg:"#F1F5F9",c:"#64748B",dot:"#94A3B8"},Safety:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"},Holiday:{bg:"#FEF3C7",c:"#D97706",dot:"#F59E0B"},Policy:{bg:"#EDE9FE",c:"#8B5CF6",dot:"#8B5CF6"},General:{bg:"#EEF2FF",c:"#6366F1",dot:"#6366F1"},Compliance:{bg:"#FFEDD5",c:"#EA580C",dot:"#F97316"},Urgent:{bg:"#FEE2E2",c:"#EF4444",dot:"#DC2626"}};
+function Badge({s}){const st=STATUS_STYLES[s]||{bg:"#F1F5F9",c:"#64748B",dot:"#94A3B8"};return<span style={{display:"inline-flex",alignItems:"center",gap:4,background:st.bg,color:st.c,borderRadius:99,padding:"3px 10px 3px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}><span style={{width:5,height:5,borderRadius:"50%",background:st.dot,flexShrink:0}}/>{s||"—"}</span>;}
+
+function Modal({title,onClose,children,width=560}){
+  return<div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",backdropFilter:"blur(4px)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{background:C.card,borderRadius:20,width:"100%",maxWidth:width,maxHeight:"93vh",overflowY:"auto",boxShadow:"0 32px 80px rgba(0,0,0,0.22)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 24px 14px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.card,zIndex:1,borderRadius:"20px 20px 0 0"}}>
+        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.text,letterSpacing:"-0.01em"}}>{title}</h2>
+        <button onClick={onClose} style={{background:C.bg,border:"none",borderRadius:8,width:30,height:30,fontSize:16,cursor:"pointer",color:C.muted,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✕</button>
+      </div>
+      <div style={{padding:"20px 24px"}}>{children}</div>
+    </div>
+  </div>;
+}
 
 function Toast({msg,type,onDone}){
   useEffect(()=>{const tm=setTimeout(onDone,3200);return()=>clearTimeout(tm);},[]);
-  return <div style={{position:"fixed",bottom:24,right:24,zIndex:2000,background:type==="error"?C.danger:C.success,color:"#fff",borderRadius:9,padding:"11px 20px",fontWeight:600,fontSize:13,boxShadow:"0 8px 24px rgba(0,0,0,0.18)",display:"flex",gap:8,alignItems:"center"}}><span>{type==="error"?"✕":"✓"}</span><span>{msg}</span></div>;
-}
-
-function Confirm({msg,onOk,onCancel}){return <Modal title="Confirm" onClose={onCancel} width={360}><p style={{margin:"0 0 18px",color:C.text,fontSize:14,lineHeight:1.6}}>{msg}</p><div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={onCancel}>Cancel</Btn><Btn v="danger" onClick={onOk}>Confirm</Btn></div></Modal>;}
-
-function TH({cols}){return <tr style={{background:C.bg}}>{cols.map(c=><th key={c} style={{padding:"10px 13px",textAlign:"left",fontWeight:700,color:C.muted,fontSize:11,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:"0.04em"}}>{c}</th>)}</tr>;}
-function TR({children,onClick}){const[h,sH]=useState(false);return <tr style={{background:h?C.bg:"#fff",cursor:onClick?"pointer":"default"}} onMouseEnter={()=>sH(true)} onMouseLeave={()=>sH(false)} onClick={onClick}>{children}</tr>;}
-function TD({children,style={}}){return <td style={{padding:"10px 13px",borderBottom:`1px solid ${C.border}`,...style}}>{children}</td>;}
-function TTable({cols,rows,empty="No records found."}){return <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><TH cols={cols}/></thead><tbody>{rows.length===0?<tr><td colSpan={cols.length} style={{padding:32,textAlign:"center",color:C.muted,fontSize:13}}>{empty}</td></tr>:rows}</tbody></table></div></Card>;}
-
-// Approval status chip with 3-level display
-function ApprovalChain({status,lang}){
-  const steps=[
-    {label:t(lang,"pendingSup"),done:status!=="Pending Supervisor"},
-    {label:t(lang,"pendingHR"),done:status==="Approved"||status==="Rejected"||status==="Pending HR"},
-    {label:status==="Rejected"?t(lang,"Rejected"):t(lang,"Approved"),done:status==="Approved"||status==="Rejected"},
-  ];
-  return <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-    {steps.map((s,i)=><span key={i} style={{display:"flex",gap:4,alignItems:"center"}}>
-      <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:s.done?C.successL:C.bg,color:s.done?C.successD:C.muted,fontWeight:600}}>{s.label}</span>
-      {i<2&&<span style={{fontSize:10,color:C.muted}}>→</span>}
-    </span>)}
+  const colors={success:{bg:"#10B981",icon:"✓"},error:{bg:"#EF4444",icon:"✕"},info:{bg:"#6366F1",icon:"ℹ"}};
+  const t=colors[type]||colors.success;
+  return<div style={{position:"fixed",bottom:28,right:28,zIndex:2000,background:t.bg,color:"#fff",borderRadius:14,padding:"12px 20px",fontWeight:600,fontSize:13,boxShadow:"0 12px 32px rgba(0,0,0,0.20)",display:"flex",gap:10,alignItems:"center",animation:"none"}}>
+    <span style={{width:22,height:22,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{t.icon}</span>{msg}
   </div>;
 }
 
-function MemoPopup({memos,empId,lang,onRead,onClose}){
-  const unread=memos.filter(m=>!m.readBy.includes(empId));
-  if(!unread.length)return null;
-  const m=unread[0];
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-    <Card style={{maxWidth:480,width:"100%",border:`2px solid ${C.accent}`}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:20}}>📢</span><strong style={{fontSize:15}}>{lang==="zh"&&m.titleZh?m.titleZh:m.title}</strong></div>
-        <Badge s={m.tag}/>
-      </div>
-      <p style={{fontSize:13,lineHeight:1.7,color:C.muted,margin:"0 0 16px"}}>{lang==="zh"&&m.bodyZh?m.bodyZh:m.body}</p>
-      <div style={{fontSize:11,color:C.muted,marginBottom:14}}>Posted by {m.author} · {fmtDate(m.date)}</div>
-      {unread.length>1&&<div style={{fontSize:12,color:C.accent,marginBottom:10}}>+{unread.length-1} more announcement(s)</div>}
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <Btn v="outline" onClick={onClose}>Later</Btn>
-        <Btn onClick={()=>onRead(m.id)}>Mark as Read</Btn>
-      </div>
-    </Card>
-  </div>;
-}
+function Confirm({msg,onOk,onCancel}){return<Modal title="⚠️ Confirm Action" onClose={onCancel} width={380}><p style={{margin:"0 0 20px",color:C.muted,fontSize:14,lineHeight:1.7}}>{msg}</p><div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={onCancel}>Cancel</Btn><Btn v="danger" onClick={onOk}>Yes, Confirm</Btn></div></Modal>;}
+
+function TH({cols}){return<tr style={{background:"linear-gradient(to right,#F8FAFC,#F1F5F9)"}}>{cols.map(c=><th key={c} style={{padding:"10px 14px",textAlign:"left",fontWeight:700,color:C.muted,fontSize:10,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:"0.07em"}}>{c}</th>)}</tr>;}
+function TR({children,onClick}){const[h,sH]=useState(false);return<tr style={{background:h?"#FAFAFF":"#fff",transition:"background 0.1s",cursor:onClick?"pointer":"default"}} onMouseEnter={()=>sH(true)} onMouseLeave={()=>sH(false)} onClick={onClick}>{children}</tr>;}
+function TD({children,style={}}){return<td style={{padding:"11px 14px",borderBottom:`1px solid ${C.border}`,...style}}>{children}</td>;}
+function TTable({cols,rows,empty="No records yet."}){return<Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><TH cols={cols}/></thead><tbody>{rows.length===0?<tr><td colSpan={cols.length} style={{padding:40,textAlign:"center",color:C.muted,fontSize:13}}><div style={{fontSize:32,marginBottom:8}}>📭</div>{empty}</td></tr>:rows}</tbody></table></div></Card>;}
 
 function TabBar({tabs,active,onChange}){
-  return <div style={{display:"flex",gap:0,borderBottom:"1px solid "+C.border,marginBottom:16}}>
-    {tabs.map(tab=>{
-      const iA=active===tab.id;
-      return <button key={tab.id} onClick={()=>onChange(tab.id)} style={{padding:"9px 16px",fontWeight:iA?700:500,fontSize:13,border:"none",background:"none",cursor:"pointer",color:iA?C.accent:C.muted,borderBottom:iA?"2px solid "+C.accent:"2px solid transparent",marginBottom:-1,fontFamily:"inherit",whiteSpace:"nowrap"}}>{tab.label}</button>;
-    })}
+  return<div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`,marginBottom:18,background:C.bg,borderRadius:"10px 10px 0 0",padding:"4px 4px 0"}}>
+    {tabs.map(tab=>{const iA=active===tab.id;return<button key={tab.id} onClick={()=>onChange(tab.id)} style={{padding:"8px 16px",fontWeight:iA?700:500,fontSize:13,border:"none",background:iA?"#fff":"transparent",cursor:"pointer",color:iA?C.accent:C.muted,borderBottom:iA?`2px solid ${C.accent}`:"2px solid transparent",marginBottom:-1,fontFamily:"inherit",borderRadius:iA?"8px 8px 0 0":"8px 8px 0 0",transition:"all 0.15s",whiteSpace:"nowrap"}}>
+      {tab.icon&&<span style={{marginRight:5}}>{tab.icon}</span>}{tab.label}
+    </button>;})}
   </div>;
 }
-
-function FilterBar({children}){return <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{children}</div>;}
-function SearchInp({value,onChange,placeholder}){return <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||"Search..."} style={{flex:1,minWidth:160,...IS}}/>;}
-function StatusPill({s,active,onClick}){const st=STATUS_STYLES[s]||{bg:C.bg,c:C.muted};return <button onClick={()=>onClick(s)} style={{border:`1px solid ${active?st.c:C.border}`,borderRadius:99,padding:"4px 14px",fontSize:12,fontWeight:active?700:500,background:active?st.bg:"#fff",color:active?st.c:C.muted,cursor:"pointer",fontFamily:"inherit"}}>{s}</button>;}
+function FilterBar({children}){return<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12,alignItems:"flex-end"}}>{children}</div>;}
+function SearchInp({value,onChange,placeholder}){return<div style={{position:"relative",flex:1,minWidth:180}}><span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:C.muted,fontSize:14}}>🔍</span><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||"Search..."} style={{...IS,paddingLeft:34}}/></div>;}
+function StatusPill({s,active,onClick}){const st=STATUS_STYLES[s]||{bg:C.bg,c:C.muted};return<button onClick={()=>onClick(s)} style={{border:`1.5px solid ${active?st.c+"66":C.border}`,borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:active?700:500,background:active?st.bg:"#fff",color:active?st.c:C.muted,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>{s}</button>;}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE: ATTENDANCE (GPS + PHOTO)
@@ -439,7 +459,7 @@ function EmpAttendance({empId,attendance,onClock,lang}){
 // ═══════════════════════════════════════════════════════════════════════════════
 function EmpLeave({empId,leaves,leaveTypes,onAdd,lang}){
   const [tab,setTab]=useState("apply");
-  const [form,setForm]=useState({type:leaveTypes[0]?.name||"Annual Leave",from:todayStr(),to:todayStr(),reason:"",halfDay:false,halfDayPeriod:"AM"});
+  const [form,setForm]=useState({type:leaveTypes[0]?.name||"Annual Leave",from:todayStr(),to:todayStr(),reason:"",halfDay:false,halfDayPeriod:"AM",attachment:""});
   useEffect(()=>{if(leaveTypes.length&&!form.type)setForm(p=>({...p,type:leaveTypes[0].name}));},[leaveTypes]);
   const set=(k,v)=>setForm(p=>({...p,[k]:v}));
   const myLeaves=leaves.filter(l=>l.empId===empId).sort((a,b)=>b.submittedDate.localeCompare(a.submittedDate));
@@ -476,6 +496,11 @@ function EmpLeave({empId,leaves,leaveTypes,onAdd,lang}){
         {t(lang,"days")}: {form.halfDay?"0.5 (Half Day)":calcDays(form.from,form.to)}
       </div>
       <Inp label={t(lang,"reason")} value={form.reason} onChange={v=>set("reason",v)} rows={3}/>
+      {(form.type==="Medical Leave"||form.type==="Hospitalisation Leave")&&<div style={{marginTop:10}}>
+        <label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",display:"block",marginBottom:6}}>📎 Medical Certificate (required)</label>
+        <Btn v="ghost" sm onClick={()=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*,application/pdf";inp.onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>set("attachment",ev.target.result);r.readAsDataURL(f);};inp.click();}}>Attach MC / Receipt</Btn>
+        {form.attachment&&<span style={{fontSize:11,color:C.success,marginLeft:8}}>✓ File attached</span>}
+      </div>}
       <div style={{fontSize:11,color:C.muted,marginTop:8}}>Approval: Employee → Supervisor → HR</div>
       <div style={{marginTop:12}}><Btn onClick={submit}>{t(lang,"submit")}</Btn></div>
     </Card>}
@@ -1694,49 +1719,619 @@ function AdminShift({shifts,employees,onAdd,onEdit,onDelete,lang}){
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
-function AdminDashboard({employees,leaves,claims,attendance,announcements,onNavigate,onLeaveAction,session,lang}){
-  const today=new Date();
-  const pendingLeaves=leaves.filter(l=>l.status==="Pending Supervisor"||l.status==="Pending HR");
-  const pendingClaims=claims.filter(c=>c.status==="Pending Supervisor"||c.status==="Pending HR");
-  const alerts=[];employees.forEach(e=>{const ep=daysUntil(e.epExpiry);if(ep!==null&&ep<=90&&ep>=0)alerts.push({name:e.name,type:"EP/SP",days:ep,color:ep<=30?C.danger:C.warning});const pp=daysUntil(e.passportExpiry);if(pp!==null&&pp<=90&&pp>=0)alerts.push({name:e.name,type:"Passport",days:pp,color:pp<=60?C.danger:C.warning});});
-  return <div style={{display:"flex",flexDirection:"column",gap:18}}>
-    <div><h1 style={{fontSize:20,fontWeight:800,color:C.text,margin:0}}>Dashboard</h1><p style={{color:C.muted,margin:"3px 0 0",fontSize:13}}>{today.toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-      <StatCard label={t(lang,"totalEmployees")} value={employees.length} sub={`${employees.filter(e=>e.status==="Active").length} ${t(lang,"active")}`} icon="E" color={C.accent}/>
-      <StatCard label="Pending Leaves" value={pendingLeaves.length} icon="L" color={C.warning}/>
-      <StatCard label="Pending Claims" value={pendingClaims.length} icon="C" color={C.purple}/>
-      <StatCard label="Doc Alerts" value={alerts.length} icon="!" color={C.danger}/>
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ERROR BOUNDARY — prevents blank page crashes, shows friendly error instead
+// ═══════════════════════════════════════════════════════════════════════════════
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={err:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  componentDidCatch(e,info){console.error("Page error:",e,info);}
+  render(){
+    if(this.state.err){return(
+      <div style={{padding:32,textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:16}}>⚠️</div>
+        <div style={{fontWeight:800,fontSize:16,marginBottom:8,color:C.danger}}>Something went wrong</div>
+        <div style={{color:C.muted,fontSize:13,marginBottom:20,maxWidth:400,margin:"0 auto 20px"}}>{this.state.err.message}</div>
+        <button onClick={()=>this.setState({err:null})} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",cursor:"pointer",fontWeight:600,fontSize:14}}>Try Again</button>
+      </div>
+    );}
+    return this.props.children;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAYSLIP PDF GENERATOR (Custera Template)
+// ═══════════════════════════════════════════════════════════════════════════════
+function fmtSGD2(n){return"$"+Number(n||0).toLocaleString("en-SG",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function openPayslipPDF(emp,p,co){
+  const[yr,mo]=p.month.split("-");const lastDay=new Date(parseInt(yr),parseInt(mo),0).getDate();
+  const moName=new Date(parseInt(yr),parseInt(mo)-1,1).toLocaleDateString("en-SG",{month:"short"});
+  const totalDeductions=(p.cpfEmployee||0)+(p.incomeTax||0)+(p.nplDeduction||0)+(p.otherDeductions||0)+(p.cdac||0);
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Payslip-${emp.name}-${p.month}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:32px;color:#333;font-size:11px;}
+.logo{font-size:26px;font-weight:900;color:#1A2340;margin-bottom:16px;letter-spacing:-1px;}
+.logo span{color:#E55B1F;}.bar{display:inline-block;width:32px;height:5px;background:linear-gradient(to right,#E55B1F,#F5A623,#2ECC71);vertical-align:middle;margin:0 2px;}
+.title{background:#2E86C1;color:#fff;text-align:center;padding:10px;font-size:16px;font-weight:bold;letter-spacing:3px;margin:14px 0 18px;}
+.hgrid{display:table;width:100%;margin-bottom:18px;}.hcol{display:table-cell;width:50%;vertical-align:top;}
+.hr{margin-bottom:5px;font-size:11px;}.hl{display:inline-block;width:140px;color:#666;}
+.wrap{display:table;width:100%;border:1px solid #ccc;}.ec{display:table-cell;width:50%;vertical-align:top;}
+.ec:first-child{border-right:1px solid #ccc;}table{width:100%;border-collapse:collapse;}
+th{background:#2E86C1;color:#fff;padding:7px 10px;text-align:left;font-size:11px;}th.r{text-align:right;}
+td{padding:5px 10px;border-bottom:1px solid #f0f0f0;font-size:11px;}td.r{text-align:right;}
+tr.b td{font-weight:bold;border-top:2px solid #bbb;background:#f8f8f8;}
+.sum{float:right;width:260px;border:1px solid #ccc;margin-top:10px;}
+.sr{display:flex;justify-content:space-between;padding:5px 12px;border-bottom:1px solid #eee;font-size:11px;}
+.sr.net{background:#e8f5fd;font-weight:bold;font-size:13px;padding:8px 12px;}
+.ft{clear:both;text-align:center;margin-top:50px;font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:12px;}
+@media print{.np{display:none;}}
+</style></head><body>
+<button class="np" onclick="window.print()" style="margin-bottom:16px;padding:8px 20px;background:#2563EB;color:#fff;border:none;cursor:pointer;border-radius:5px;font-size:13px;font-weight:600;">🖨️ Print / Save as PDF</button>
+<div class="logo">CUSTER<span>A</span><span class="bar"></span></div>
+<div class="title">PAYSLIP</div>
+<div class="hgrid"><div class="hcol">
+<div class="hr"><span class="hl">Company Name</span>${co?.name||"CUSTERA O&M PTE LTD"}</div>
+<div class="hr"><span class="hl">UEN</span>${co?.uen||"202549889D"}</div>
+<div class="hr"><span class="hl">Payment Date</span>${lastDay}-${moName}-${yr}</div>
+<div class="hr"><span class="hl">Salary Period</span>01-${moName}-${yr} to ${lastDay}-${moName}-${yr}</div>
+<div class="hr"><span class="hl">Last Working Day</span>${emp.lastWorkingDay||"-"}</div>
+</div><div class="hcol">
+<div class="hr"><span class="hl">Employee Name</span>${emp.name}</div>
+<div class="hr"><span class="hl">Emp ID</span>${emp.id}</div>
+<div class="hr"><span class="hl">Designation</span>${emp.position||""}</div>
+<div class="hr"><span class="hl">Department</span>${emp.department||""}</div>
+</div></div>
+<div class="wrap"><div class="ec"><table><thead><tr><th>Description</th><th class="r">Amount (SGD)</th></tr></thead><tbody>
+<tr><td>Current Month Salary</td><td class="r">${fmtSGD2(p.basic)}</td></tr>
+<tr><td>Housing Allowance</td><td class="r">${fmtSGD2(p.housingAllowance||0)}</td></tr>
+<tr><td>Phone Allowance</td><td class="r">${fmtSGD2(p.phoneAllowance||0)}</td></tr>
+<tr><td>Airfare Allowance</td><td class="r">${fmtSGD2(p.airfareAllowance||0)}</td></tr>
+<tr><td>Overtime Pay</td><td class="r">${fmtSGD2(p.otPay||0)}</td></tr>
+<tr><td>Leave Encashment</td><td class="r">${fmtSGD2(p.leaveEncashment||0)}</td></tr>
+<tr><td>Performance Bonus</td><td class="r">${fmtSGD2(p.commission||0)}</td></tr>
+<tr class="b"><td>Gross Pay</td><td class="r">${fmtSGD2(p.gross)}</td></tr>
+</tbody></table></div><div class="ec"><table><thead><tr><th>Description</th><th class="r">Amount (SGD)</th></tr></thead><tbody>
+<tr><td>No Paid Leave</td><td class="r">${fmtSGD2(p.nplDeduction||0)}</td></tr>
+<tr><td>Income Tax</td><td class="r">${fmtSGD2(p.incomeTax||0)}</td></tr>
+<tr><td>HQ Wage Deduction</td><td class="r">${fmtSGD2(p.otherDeductions||0)}</td></tr>
+<tr><td>Employee CPF</td><td class="r">${fmtSGD2(p.cpfEmployee||0)}</td></tr>
+<tr><td>Donation (CDAC/SINDA)</td><td class="r">${fmtSGD2(p.cdac||0)}</td></tr>
+<tr class="b"><td>Total Deductions</td><td class="r">${fmtSGD2(totalDeductions)}</td></tr>
+</tbody></table></div></div>
+<div class="sum">
+<div class="sr net"><span>Net Pay</span><span>$ ${fmtSGD2(p.netPay)}</span></div>
+<div class="sr"><span>Gross Pay</span><span>$ ${fmtSGD2(p.gross)}</span></div>
+<div class="sr"><span>CPF Wage</span><span>$ ${fmtSGD2(p.basic)}</span></div>
+<div class="sr"><span>Employer CPF</span><span>$ ${fmtSGD2(p.cpfEmployer||0)}</span></div>
+<div class="sr"><span>Employee CPF</span><span>$ ${fmtSGD2(p.cpfEmployee||0)}</span></div>
+</div>
+<div class="ft">This is a computer generated payslip, no signature is required.</div>
+</body></html>`;
+  const w=window.open("","_blank");
+  if(w){w.document.write(html);w.document.close();}
+  else alert("Please allow pop-ups to download payslip.");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: PROJECTS / DEPARTMENT MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── BENEFIT TRACKING DATA ────────────────────────────────────────────────────
+const INIT_BENEFIT_TYPES = [
+  {id:"bt1",name:"TCM / Traditional Medicine",icon:"🌿",limit:500,period:"annual",description:"Acupuncture, TCM, massage therapy",active:true},
+  {id:"bt2",name:"Dental & Optical",icon:"🦷",limit:300,period:"annual",description:"Dental checkups, spectacles, contact lenses",active:true},
+  {id:"bt3",name:"Wellness & Gym",icon:"💪",limit:600,period:"annual",description:"Gym membership, fitness classes, sports equipment",active:true},
+  {id:"bt4",name:"Computer Accessories",icon:"💻",limit:500,period:"annual",description:"Mouse, keyboard, webcam, headset",active:true},
+  {id:"bt5",name:"Professional Development",icon:"📚",limit:1000,period:"annual",description:"Courses, certifications, books, conferences",active:true},
+  {id:"bt6",name:"Medical Claims",icon:"🏥",limit:500,period:"annual",description:"GP visit, specialist, medication",active:true},
+];
+
+// ─── CONFIGURABLE ALLOWANCE TYPES ────────────────────────────────────────────
+const INIT_ALLOWANCE_TYPES = [
+  {id:"al1",key:"phoneAllowance",label:"Phone Allowance",icon:"📱",active:true,cpf:false},
+  {id:"al2",key:"housingAllowance",label:"Housing Allowance",icon:"🏠",active:true,cpf:false},
+  {id:"al3",key:"airfareAllowance",label:"Airfare Allowance",icon:"✈️",active:true,cpf:false},
+  {id:"al4",key:"transportAllowance",label:"Transport Allowance",icon:"🚌",active:false,cpf:false},
+  {id:"al5",key:"mealAllowance",label:"Meal Allowance",icon:"🍱",active:false,cpf:false},
+  {id:"al6",key:"otherAllowance",label:"Other Allowance",icon:"💰",active:true,cpf:false},
+];
+
+// ─── CONFIGURABLE EMPLOYEE FIELDS ────────────────────────────────────────────
+const INIT_EMP_FIELD_CONFIG = [
+  {section:"Personal",fields:[
+    {key:"fin",label:"FIN / NRIC",type:"text",active:true,required:true},
+    {key:"dob",label:"Date of Birth",type:"date",active:true,required:false},
+    {key:"gender",label:"Gender",type:"text",active:true,required:false},
+    {key:"nationality",label:"Nationality",type:"text",active:true,required:false},
+    {key:"marital",label:"Marital Status",type:"text",active:false,required:false},
+    {key:"religion",label:"Religion",type:"text",active:false,required:false},
+    {key:"qualification",label:"Qualification",type:"text",active:true,required:false},
+  ]},
+  {section:"Contact",fields:[
+    {key:"mobile",label:"Mobile No.",type:"text",active:true,required:false},
+    {key:"personalEmail",label:"Personal Email",type:"email",active:true,required:false},
+    {key:"workEmail",label:"Work Email",type:"email",active:true,required:false},
+    {key:"residenceAddress",label:"Residence Address",type:"text",active:true,required:false},
+  ]},
+  {section:"Work Pass",fields:[
+    {key:"workPass",label:"Work Pass Type",type:"text",active:true,required:false},
+    {key:"epSpNo",label:"Work Pass No.",type:"text",active:true,required:false},
+    {key:"workPassIssueDate",label:"WP Issue Date",type:"date",active:true,required:false},
+    {key:"workPassExpiryDate",label:"WP Expiry Date",type:"date",active:true,required:false},
+    {key:"passportNumber",label:"Passport No.",type:"text",active:true,required:false},
+    {key:"passportIssueDate",label:"Passport Issue",type:"date",active:true,required:false},
+    {key:"passportExpiryDate",label:"Passport Expiry",type:"date",active:true,required:false},
+    {key:"probationEndDate",label:"Probation End Date",type:"date",active:true,required:false},
+  ]},
+  {section:"Bank & Payroll",fields:[
+    {key:"bankName",label:"Bank Name",type:"text",active:true,required:false},
+    {key:"bankAccount",label:"Bank Account No.",type:"text",active:true,required:false},
+  ]},
+  {section:"Emergency Contact",fields:[
+    {key:"emergencyContactName",label:"Emergency Contact Name",type:"text",active:true,required:false},
+    {key:"emergencyContactPhone",label:"Emergency Contact Phone",type:"text",active:true,required:false},
+    {key:"emergencyContactRelation",label:"Relationship",type:"text",active:true,required:false},
+  ]},
+];
+
+// ─── EMPLOYEE: BENEFITS (My Benefit Claims) ──────────────────────────────────
+function EmpBenefits({empId,benefitTypes,benefitClaims,onAdd,lang}){
+  const safeBT=Array.isArray(benefitTypes)&&benefitTypes.length?benefitTypes:INIT_BENEFIT_TYPES;
+  const safeClaims=Array.isArray(benefitClaims)?benefitClaims:[];
+  const myClaims=safeClaims.filter(c=>c.empId===empId);
+  const year=new Date().getFullYear();
+  const [showForm,setShowForm]=useState(false);
+  const [selType,setSelType]=useState("");
+  const [form,setForm]=useState({benefitTypeId:"",date:todayStr(),amount:"",description:"",receipt:""});
+  const setFk=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const fileRef=useRef();
+  function handleFile(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setFk("receipt",ev.target.result);r.readAsDataURL(f);}
+  function getUsed(btId){return myClaims.filter(c=>c.benefitTypeId===btId&&c.status==="Approved"&&c.date?.startsWith(String(year))).reduce((s,c)=>s+Number(c.amount||0),0);}
+  function getPending(btId){return myClaims.filter(c=>c.benefitTypeId===btId&&c.status==="Pending"&&c.date?.startsWith(String(year))).reduce((s,c)=>s+Number(c.amount||0),0);}
+  function submit(){if(!form.benefitTypeId||!form.amount||!form.description.trim())return;onAdd({...form,empId,amount:Number(form.amount),status:"Pending",submittedDate:todayStr(),adminComment:""});setShowForm(false);setForm({benefitTypeId:"",date:todayStr(),amount:"",description:"",receipt:""});}
+  return<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <PageTitle title="💊 My Benefits" sub={`${year} benefit entitlements and claims`} actions={[<Btn onClick={()=>setShowForm(true)}>+ Submit Claim</Btn>]}/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+      {safeBT.filter(bt=>bt.active).map(bt=>{
+        const used=getUsed(bt.id);const pending=getPending(bt.id);const limit=Number(bt.limit)||0;const pct=limit>0?Math.min(100,(used/limit)*100):0;
+        return<Card key={bt.id} style={{padding:"16px 18px"}}>
+          <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+            <div style={{width:44,height:44,borderRadius:12,background:C.accentL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{bt.icon||"💰"}</div>
+            <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14}}>{bt.name}</div><div style={{fontSize:11,color:C.muted,marginTop:2}}>{bt.description}</div></div>
+          </div>
+          <div style={{marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:5}}>
+              <span style={{color:C.muted}}>Used: <strong style={{color:C.danger}}>{sgd(used)}</strong></span>
+              <span style={{color:C.muted}}>Limit: <strong>{sgd(limit)}</strong></span>
+            </div>
+            <div style={{height:7,background:C.border,borderRadius:99,overflow:"hidden"}}>
+              <div style={{width:`${pct}%`,height:"100%",background:pct>=90?C.danger:pct>=70?C.warning:C.success,borderRadius:99,transition:"width 0.5s ease"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginTop:4}}>
+              <span style={{color:pending>0?C.warning:C.muted}}>{pending>0?`⏳ ${sgd(pending)} pending`:""}</span>
+              <span style={{fontWeight:700,color:pct>=90?C.danger:C.success}}>Balance: {sgd(Math.max(0,limit-used))}</span>
+            </div>
+          </div>
+          <Btn sm v="outline" onClick={()=>{setShowForm(true);setFk("benefitTypeId",bt.id);}}>+ Claim This</Btn>
+        </Card>;
+      })}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-      <Card>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SecTitle>Pending Approvals</SecTitle><Btn v="outline" sm onClick={()=>onNavigate("leaves")}>View All</Btn></div>
-        {pendingLeaves.length===0&&<p style={{color:C.muted,fontSize:13}}>All clear.</p>}
-        {pendingLeaves.slice(0,4).map(l=>{const emp=employees.find(e=>e.id===l.empId);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
-          <Avatar name={emp?.name||"?"} size={30}/><div style={{flex:1}}><div style={{fontWeight:600,fontSize:12}}>{emp?.name}</div><div style={{fontSize:11,color:C.muted}}>{l.type} · {fmtDate(l.from)}-{fmtDate(l.to)}</div><Badge s={l.status}/></div>
-          <Btn v="success" sm onClick={()=>onLeaveAction(l.id,l.status==="Pending Supervisor"?"Pending HR":"Approved",session.name,"")}>✓</Btn>
-          <Btn v="danger" sm onClick={()=>onLeaveAction(l.id,"Rejected",session.name,"")}>✕</Btn>
-        </div>;})}
-      </Card>
-      <Card>
-        <SecTitle>Document Expiry Alerts</SecTitle>
-        {alerts.length===0&&<p style={{color:C.muted,fontSize:13}}>No alerts within 90 days.</p>}
-        {alerts.slice(0,6).map((a,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-          <div style={{width:8,height:8,borderRadius:"50%",background:a.color,flexShrink:0}}/>
-          <div style={{flex:1}}><span style={{fontWeight:600,fontSize:12}}>{a.name}</span><span style={{color:C.muted,fontSize:11}}> — {a.type}</span></div>
-          <span style={{fontSize:12,fontWeight:700,color:a.color}}>{a.days===0?"TODAY":a.days+"d"}</span>
-        </div>)}
-      </Card>
-      <Card>
-        <SecTitle>Announcements</SecTitle>
-        {announcements.slice(0,3).map(a=><div key={a.id} style={{borderLeft:`3px solid ${C.accent}`,paddingLeft:10,marginBottom:10}}><div style={{fontWeight:600,fontSize:13}}>{a.title}</div><div style={{fontSize:11,color:C.muted}}>{fmtDate(a.date)}</div></div>)}
-      </Card>
+    {myClaims.length>0&&<><SecTitle icon="📋">My Claim History</SecTitle>
+    <TTable cols={["Benefit","Date","Amount","Description","Status","Submitted"]}
+      rows={[...myClaims].sort((a,b)=>b.submittedDate?.localeCompare(a.submittedDate||"")||0).map(c=>{const bt=safeBT.find(x=>x.id===c.benefitTypeId);return<TR key={c.id}>
+        <TD><span style={{fontSize:18,marginRight:6}}>{bt?.icon||"💰"}</span><span style={{fontWeight:600,fontSize:12}}>{bt?.name||c.benefitTypeId}</span></TD>
+        <TD style={{fontSize:12}}>{fmtDate(c.date)}</TD>
+        <TD style={{fontWeight:700,color:C.success}}>{sgd(c.amount)}</TD>
+        <TD style={{fontSize:12,color:C.muted}}>{c.description}</TD>
+        <TD><Badge s={c.status}/></TD>
+        <TD style={{fontSize:11,color:C.muted}}>{fmtDate(c.submittedDate)}</TD>
+      </TR>;})}/>
+    </>}
+    {showForm&&<Modal title="💊 Submit Benefit Claim" onClose={()=>setShowForm(false)} width={480}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Sel label="Benefit Type" value={form.benefitTypeId} onChange={v=>setFk("benefitTypeId",v)} required options={safeBT.filter(bt=>bt.active).map(bt=>({v:bt.id,l:`${bt.icon||""} ${bt.name} (limit: ${sgd(bt.limit)})`}))}/>
+        <Grid><Inp label="Date" type="date" value={form.date} onChange={v=>setFk("date",v)}/><Inp label="Amount (S$)" type="number" value={form.amount} onChange={v=>setFk("amount",v)} required/></Grid>
+        <Inp label="Description / Purpose" value={form.description} onChange={v=>setFk("description",v)} rows={2} placeholder="e.g. Dental checkup at Bright Dental Clinic"/>
+        <div><label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",display:"block",marginBottom:6}}>Receipt / Invoice</label>
+          <Btn v="ghost" sm onClick={()=>fileRef.current?.click()}>📎 Attach Receipt</Btn>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={handleFile}/>
+          {form.receipt&&<div style={{fontSize:11,color:C.success,marginTop:4}}>✓ File attached</div>}
+        </div>
+        <div style={{background:C.accentL,borderRadius:10,padding:"10px 14px",fontSize:12,color:C.accentT}}>📌 Claims require admin approval. Allow 3-5 working days for processing.</div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={()=>setShowForm(false)}>Cancel</Btn><Btn onClick={submit}>Submit Claim</Btn></div>
+      </div>
+    </Modal>}
+  </div>;
+}
+
+// ─── ADMIN: BENEFITS SETUP & APPROVAL ────────────────────────────────────────
+function AdminBenefits({benefitTypes,benefitClaims,employees,onAddType,onEditType,onDeleteType,onApprove,onReject,lang}){
+  const safeBT=Array.isArray(benefitTypes)&&benefitTypes.length?benefitTypes:INIT_BENEFIT_TYPES;
+  const safeClaims=Array.isArray(benefitClaims)?benefitClaims:[];
+  const [tab,setTab]=useState("claims");
+  const [showTypeForm,setShowTypeForm]=useState(false);
+  const [editType,setEditType]=useState(null);
+  const [tf,setTf]=useState({name:"",icon:"💰",limit:"",period:"annual",description:"",active:true});
+  const [filter,setFilter]=useState("Pending");
+  const setTfk=(k,v)=>setTf(p=>({...p,[k]:v}));
+  function saveType(){if(!tf.name.trim())return;const d={...tf,limit:Number(tf.limit)||0};editType?onEditType(editType.id,d):onAddType({...d,id:"bt"+Date.now()});setShowTypeForm(false);}
+  function totalClaimed(btId){return safeClaims.filter(c=>c.benefitTypeId===btId&&c.status==="Approved").reduce((s,c)=>s+Number(c.amount||0),0);}
+  const filtered=filter==="All"?safeClaims:safeClaims.filter(c=>c.status===filter);
+  const totalPending=safeClaims.filter(c=>c.status==="Pending").reduce((s,c)=>s+Number(c.amount||0),0);
+  const TABS=[{id:"claims",label:"Claims",icon:"📋"},{id:"types",label:"Benefit Types",icon:"⚙️"}];
+  return<div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <PageTitle title="💊 Benefits Management" sub={`${safeClaims.filter(c=>c.status==="Pending").length} pending approvals · ${sgd(totalPending)} pending`}/>
+    <TabBar tabs={TABS} active={tab} onChange={setTab}/>
+    {tab==="claims"&&<>
+      <FilterBar>{["All","Pending","Approved","Rejected"].map(s=><StatusPill key={s} s={s} active={filter===s} onClick={setFilter}/>)}</FilterBar>
+      <TTable cols={["Employee","Benefit","Date","Amount","Description","Status","Actions"]}
+        rows={filtered.sort((a,b)=>b.submittedDate?.localeCompare(a.submittedDate||"")||0).map(c=>{const emp=employees.find(e=>e.id===c.empId);const bt=safeBT.find(x=>x.id===c.benefitTypeId);return<TR key={c.id}>
+          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={emp?.name||"?"} size={26}/><span style={{fontWeight:600,fontSize:12}}>{emp?.name||c.empId}</span></div></TD>
+          <TD style={{fontSize:12}}>{bt?.icon||"💰"} {bt?.name||"—"}</TD>
+          <TD style={{fontSize:12}}>{fmtDate(c.date)}</TD>
+          <TD style={{fontWeight:700,color:C.success}}>{sgd(c.amount)}</TD>
+          <TD style={{fontSize:12,color:C.muted,maxWidth:150}}>{c.description?.slice(0,40)||"—"}</TD>
+          <TD><Badge s={c.status}/></TD>
+          <TD><div style={{display:"flex",gap:4}}>
+            {c.status==="Pending"&&<><Btn v="success" sm onClick={()=>onApprove(c.id)}>✓</Btn><Btn v="danger" sm onClick={()=>onReject(c.id)}>✕</Btn></>}
+            {c.receipt&&<Btn v="ghost" sm onClick={()=>{const w=window.open("","_blank");w&&(w.document.write(`<img src="${c.receipt}" style="max-width:100%"/>`),w.document.close());}}>📎</Btn>}
+          </div></TD>
+        </TR>;})}/>
+    </>}
+    {tab==="types"&&<>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><Btn onClick={()=>{setEditType(null);setTf({name:"",icon:"💰",limit:"",period:"annual",description:"",active:true});setShowTypeForm(true);}}>+ Add Benefit Type</Btn></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
+        {safeBT.map(bt=><Card key={bt.id} style={{opacity:bt.active?1:0.6}}>
+          <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:24}}>{bt.icon||"💰"}</span>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>{bt.name}</div><div style={{fontSize:11,color:C.muted}}>{bt.period} · Limit: {sgd(bt.limit)}</div></div>
+            <Badge s={bt.active?"Active":"Inactive"}/>
+          </div>
+          <div style={{fontSize:12,color:C.muted,marginBottom:10}}>{bt.description}</div>
+          <div style={{fontSize:12,fontWeight:700,color:C.accent,marginBottom:10}}>Total claimed: {sgd(totalClaimed(bt.id))}</div>
+          <div style={{display:"flex",gap:6}}>
+            <Btn v="outline" sm onClick={()=>{setEditType(bt);setTf({name:bt.name,icon:bt.icon||"💰",limit:String(bt.limit),period:bt.period,description:bt.description,active:bt.active});setShowTypeForm(true);}}>Edit</Btn>
+            <Btn v={bt.active?"warning":"success"} sm onClick={()=>onEditType(bt.id,{...bt,active:!bt.active})}>{bt.active?"Disable":"Enable"}</Btn>
+          </div>
+        </Card>)}
+      </div>
+      {showTypeForm&&<Modal title={editType?"Edit Benefit Type":"Add Benefit Type"} onClose={()=>setShowTypeForm(false)} width={460}>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <Grid cols={3}><Inp label="Icon (emoji)" value={tf.icon} onChange={v=>setTfk("icon",v)} placeholder="💰"/><div style={{gridColumn:"span 2"}}><Inp label="Benefit Name" value={tf.name} onChange={v=>setTfk("name",v)} required/></div></Grid>
+          <Grid><Inp label="Annual Limit (S$)" type="number" value={tf.limit} onChange={v=>setTfk("limit",v)}/><Sel label="Period" value={tf.period} onChange={v=>setTfk("period",v)} options={["annual","monthly"]}/></Grid>
+          <Inp label="Description" value={tf.description} onChange={v=>setTfk("description",v)} rows={2}/>
+          <label style={{display:"flex",gap:8,fontSize:13,cursor:"pointer"}}><input type="checkbox" checked={tf.active} onChange={e=>setTfk("active",e.target.checked)}/>Active (visible to employees)</label>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={()=>setShowTypeForm(false)}>Cancel</Btn><Btn onClick={saveType}>Save</Btn></div>
+        </div>
+      </Modal>}
+    </>}
+  </div>;
+}
+
+// ─── ADMIN: FIELD CONFIG (Settings tab) ──────────────────────────────────────
+function FieldConfigManager({fieldConfig,onUpdate}){
+  const safe=Array.isArray(fieldConfig)&&fieldConfig.length?fieldConfig:INIT_EMP_FIELD_CONFIG;
+  function toggle(secIdx,fIdx){
+    const updated=safe.map((sec,si)=>si!==secIdx?sec:{...sec,fields:sec.fields.map((f,fi)=>fi!==fIdx?f:{...f,active:!f.active})});
+    onUpdate(updated);
+  }
+  return<div>
+    <div style={{fontSize:13,color:C.muted,marginBottom:14}}>Toggle which fields appear in the Employee form. Core fields (ID, Name, Department) are always shown.</div>
+    {safe.map((sec,si)=><div key={sec.section} style={{marginBottom:16}}>
+      <SecTitle icon="📋">{sec.section}</SecTitle>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {(sec.fields||[]).map((f,fi)=><button key={f.key} onClick={()=>toggle(si,fi)} style={{display:"flex",gap:6,alignItems:"center",background:f.active?C.successL:C.bg,border:`1.5px solid ${f.active?C.success:C.border}`,borderRadius:9,padding:"5px 12px",cursor:"pointer",fontSize:12,fontWeight:600,color:f.active?C.successD:C.muted,fontFamily:"inherit"}}>
+          <span>{f.active?"✓":"○"}</span>{f.label}
+        </button>)}
+      </div>
+    </div>)}
+  </div>;
+}
+
+// ─── ADMIN: ALLOWANCE TYPE MANAGER ───────────────────────────────────────────
+function AllowanceTypeManager({allowanceTypes,onUpdate}){
+  const safe=Array.isArray(allowanceTypes)&&allowanceTypes.length?allowanceTypes:INIT_ALLOWANCE_TYPES;
+  const [showAdd,setShowAdd]=useState(false);
+  const [nf,setNf]=useState({key:"",label:"",icon:"💰",active:true,cpf:false});
+  function toggle(id){onUpdate(safe.map(a=>a.id===id?{...a,active:!a.active}:a));}
+  function addNew(){if(!nf.label.trim())return;const key=nf.label.toLowerCase().replace(/\s+/g,"_")+"Allowance";onUpdate([...safe,{...nf,key,id:"al"+Date.now()}]);setShowAdd(false);setNf({key:"",label:"",icon:"💰",active:true,cpf:false});}
+  function del(id){onUpdate(safe.filter(a=>a.id!==id));}
+  return<div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{fontSize:13,color:C.muted}}>Configure which allowance types appear in payroll processing.</div>
+      <Btn sm onClick={()=>setShowAdd(true)}>+ Add Allowance Type</Btn>
     </div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+      {safe.map(a=><div key={a.id} style={{display:"flex",gap:6,alignItems:"center",background:a.active?C.accentL:C.bg,border:`1.5px solid ${a.active?C.accent:C.border}`,borderRadius:99,padding:"5px 6px 5px 12px"}}>
+        <span style={{fontSize:13}}>{a.icon||"💰"}</span><span style={{fontSize:12,fontWeight:600,color:a.active?C.accentT:C.muted}}>{a.label}</span>
+        <button onClick={()=>toggle(a.id)} style={{background:a.active?C.accent:C.border,color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>{a.active?"✓":"○"}</button>
+        {!a.required&&<button onClick={()=>del(a.id)} style={{background:C.dangerL,color:C.danger,border:"none",borderRadius:"50%",width:18,height:18,fontSize:10,cursor:"pointer"}}>✕</button>}
+      </div>)}
+    </div>
+    {showAdd&&<div style={{background:C.bg,borderRadius:12,padding:"14px",border:`1px solid ${C.border}`}}>
+      <Grid cols={3}><Inp label="Icon" value={nf.icon} onChange={v=>setNf(p=>({...p,icon:v}))}/><div style={{gridColumn:"span 2"}}><Inp label="Allowance Name" value={nf.label} onChange={v=>setNf(p=>({...p,label:v}))} placeholder="e.g. Cloud / WFH Allowance"/></div></Grid>
+      <div style={{display:"flex",gap:10,marginTop:10,justifyContent:"flex-end"}}><Btn v="ghost" sm onClick={()=>setShowAdd(false)}>Cancel</Btn><Btn sm onClick={addNew}>Add</Btn></div>
+    </div>}
+  </div>;
+}
+
+const INIT_PROJECTS_DATA=[
+  {id:"P001",name:"Tuas Industrial Project",code:"TIS-2026",client:"JTC Corporation",startDate:"2026-01-01",endDate:"2027-12-31",status:"Active",supervisorId:"C006",hodId:"C001",members:["C004","C005"],description:"Industrial building construction at Tuas West"},
+  {id:"P002",name:"Jurong Residential Development",code:"JRD-2026",client:"HDB",startDate:"2026-03-01",endDate:"2028-06-30",status:"Active",supervisorId:"C002",hodId:"C001",members:["C005","C012"],description:"Public housing development at Jurong East"},
+];
+
+function AdminProjects({projects,employees,onAdd,onEdit,onDelete}){
+  const safeProjects=Array.isArray(projects)?projects:[];
+  const safeEmps=Array.isArray(employees)?employees:[];
+  const [showForm,setShowForm]=useState(false);
+  const [editP,setEditP]=useState(null);
+  const [viewP,setViewP]=useState(null);
+  const [confirmId,setConfirmId]=useState(null);
+  const EF={name:"",code:"",client:"",startDate:"",endDate:"",status:"Active",supervisorId:"",hodId:"",members:[],description:""};
+  const [f,setF]=useState(EF);
+  const setFk=(k,v)=>setF(p=>({...p,[k]:v}));
+  function openNew(){setEditP(null);setF(EF);setShowForm(true);}
+  function openEdit(p){setEditP(p);setF({name:p.name||"",code:p.code||"",client:p.client||"",startDate:p.startDate||"",endDate:p.endDate||"",status:p.status||"Active",supervisorId:p.supervisorId||"",hodId:p.hodId||"",members:Array.isArray(p.members)?p.members:[],description:p.description||""});setShowForm(true);}
+  function save(){if(!f.name.trim())return;editP?onEdit(editP.id,{...f,id:editP.id}):onAdd({...f,id:"P"+String(safeProjects.length+1).padStart(3,"0")});setShowForm(false);}
+  function toggleMember(id){setF(p=>({...p,members:(p.members||[]).includes(id)?(p.members||[]).filter(x=>x!==id):[...(p.members||[]),id]}))}
+  const statusC={Active:C.success,Completed:C.accent,OnHold:C.warning,Cancelled:C.danger};
+  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <PageTitle title="Projects" sub={`${safeProjects.length} projects`} actions={[<Btn onClick={openNew}>+ New Project</Btn>]}/>
+    {safeProjects.length===0&&<Card><p style={{color:C.muted,textAlign:"center",padding:32,fontSize:13}}>No projects yet. Click + New Project to create one.</p></Card>}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      {safeProjects.map(p=>{
+        const sup=safeEmps.find(e=>e.id===p.supervisorId);
+        const hod=safeEmps.find(e=>e.id===p.hodId);
+        const membs=safeEmps.filter(e=>(p.members||[]).includes(e.id));
+        return <Card key={p.id} style={{borderLeft:`4px solid ${statusC[p.status]||C.accent}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+            <div><div style={{fontWeight:800,fontSize:14}}>{p.name}</div><div style={{fontSize:11,color:C.muted,marginTop:2}}>{p.code||""}{p.client?` · ${p.client}`:""}</div></div>
+            <Badge s={p.status||"Active"}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12,marginBottom:10}}>
+            <div><div style={{fontSize:10,color:C.muted}}>Supervisor</div><div style={{fontWeight:600}}>{sup?.name?.split(",")[0]||"—"}</div></div>
+            <div><div style={{fontSize:10,color:C.muted}}>HOD</div><div style={{fontWeight:600}}>{hod?.name?.split(",")[0]||"—"}</div></div>
+            <div><div style={{fontSize:10,color:C.muted}}>Start</div><div>{fmtDate(p.startDate)}</div></div>
+            <div><div style={{fontSize:10,color:C.muted}}>End</div><div>{fmtDate(p.endDate)}</div></div>
+          </div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
+            {membs.slice(0,5).map(m=><div key={m.id} title={m.name}><Avatar name={m.name} size={26}/></div>)}
+            {membs.length>5&&<div style={{width:26,height:26,borderRadius:"50%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:C.muted}}>+{membs.length-5}</div>}
+            {membs.length===0&&<span style={{fontSize:11,color:C.muted}}>No members yet</span>}
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <Btn v="outline" sm onClick={()=>setViewP(p)}>View</Btn>
+            <Btn v="ghost" sm onClick={()=>openEdit(p)}>Edit</Btn>
+            <Btn v="danger" sm onClick={()=>setConfirmId(p.id)}>Del</Btn>
+          </div>
+        </Card>;
+      })}
+    </div>
+    {viewP&&<Modal title={viewP.name} onClose={()=>setViewP(null)} width={560}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {[["Code",viewP.code||"—"],["Client",viewP.client||"—"],["Status",viewP.status],["Start",fmtDate(viewP.startDate)],["End",fmtDate(viewP.endDate)],["HOD",safeEmps.find(e=>e.id===viewP.hodId)?.name||"—"],["Supervisor",safeEmps.find(e=>e.id===viewP.supervisorId)?.name||"—"]].map(([k,v])=><div key={k} style={{background:C.bg,borderRadius:7,padding:"8px 12px"}}><div style={{fontSize:10,color:C.muted}}>{k}</div><div style={{fontWeight:600,fontSize:13}}>{v}</div></div>)}
+      </div>
+      {viewP.description&&<div style={{background:C.bg,borderRadius:7,padding:"10px 12px",marginBottom:12,fontSize:13}}>{viewP.description}</div>}
+      <SecTitle>Team Members ({safeEmps.filter(e=>(viewP.members||[]).includes(e.id)).length})</SecTitle>
+      {safeEmps.filter(e=>(viewP.members||[]).includes(e.id)).map(e=><div key={e.id} style={{display:"flex",gap:10,alignItems:"center",background:C.bg,borderRadius:7,padding:"8px 12px",marginBottom:6}}><Avatar name={e.name} size={30}/><div><div style={{fontWeight:600,fontSize:13}}>{e.name}</div><div style={{fontSize:11,color:C.muted}}>{e.position}</div></div></div>)}
+    </Modal>}
+    {showForm&&<Modal title={editP?"Edit Project":"New Project"} onClose={()=>setShowForm(false)} width={660}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Grid><Inp label="Project Name" value={f.name} onChange={v=>setFk("name",v)} required/><Inp label="Project Code" value={f.code} onChange={v=>setFk("code",v)} placeholder="e.g. TIS-2026"/></Grid>
+        <Grid><Inp label="Client" value={f.client} onChange={v=>setFk("client",v)}/><Sel label="Status" value={f.status} onChange={v=>setFk("status",v)} options={["Active","Completed","OnHold","Cancelled"]}/></Grid>
+        <Grid><Inp label="Start Date" type="date" value={f.startDate} onChange={v=>setFk("startDate",v)}/><Inp label="End Date" type="date" value={f.endDate} onChange={v=>setFk("endDate",v)}/></Grid>
+        <Grid><Sel label="HOD (Head of Department)" value={f.hodId} onChange={v=>setFk("hodId",v)} options={[{v:"",l:"— Select —"},...safeEmps.map(e=>({v:e.id,l:`${e.id} - ${e.name}`}))]}/><Sel label="Supervisor / Reporting Officer" value={f.supervisorId} onChange={v=>setFk("supervisorId",v)} options={[{v:"",l:"— Select —"},...safeEmps.map(e=>({v:e.id,l:`${e.id} - ${e.name}`}))]}/></Grid>
+        <Inp label="Description" value={f.description} onChange={v=>setFk("description",v)} rows={2}/>
+        <div><label style={{fontSize:12,fontWeight:600,color:C.muted,display:"block",marginBottom:8}}>Team Members</label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {safeEmps.map(e=>{const sel=(f.members||[]).includes(e.id);return<button key={e.id} onClick={()=>toggleMember(e.id)} style={{display:"flex",gap:6,alignItems:"center",background:sel?C.accentL:C.bg,border:`1px solid ${sel?C.accent:C.border}`,borderRadius:20,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:sel?700:400,color:sel?C.accent:C.muted,fontFamily:"inherit"}}>
+              <Avatar name={e.name} size={18}/>{e.name.split(/[\s,]+/)[0]}
+            </button>;})}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><Btn v="ghost" onClick={()=>setShowForm(false)}>Cancel</Btn><Btn onClick={save}>Save Project</Btn></div>
+      </div>
+    </Modal>}
+    {confirmId&&<Confirm msg="Delete this project?" onOk={()=>{onDelete(confirmId);setConfirmId(null);}} onCancel={()=>setConfirmId(null)}/>}
   </div>;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOGIN
+// ADMIN: TRACKER — Work Pass + Passport + Birthdays + Leave Balance
 // ═══════════════════════════════════════════════════════════════════════════════
+function AdminTracker({employees,leaves,leaveTypes}){
+  const safeEmps=Array.isArray(employees)?employees:[];
+  const safeLeaves=Array.isArray(leaves)?leaves:[];
+  const safeLT=Array.isArray(leaveTypes)&&leaveTypes.length?leaveTypes:[{name:"Annual Leave",days:14},{name:"Medical Leave",days:14}];
+  const [tab,setTab]=useState("workpass");
+  const today=new Date();
+  const wpRows=safeEmps.filter(e=>e.workPassExpiryDate||e.epExpiry).map(e=>{
+    const exp=e.workPassExpiryDate||e.epExpiry||"";
+    const d=daysUntil(exp);
+    return{...e,_exp:exp,daysLeft:d,urgent:d!==null&&d<=30&&d>=0,warn:d!==null&&d>30&&d<=90};
+  }).sort((a,b)=>(a.daysLeft===null?9999:a.daysLeft)-(b.daysLeft===null?9999:b.daysLeft));
+  const ppRows=safeEmps.filter(e=>e.passportExpiryDate||e.passportExpiry).map(e=>{
+    const exp=e.passportExpiryDate||e.passportExpiry||"";
+    const d=daysUntil(exp);
+    return{...e,_exp:exp,daysLeft:d,urgent:d!==null&&d<=60&&d>=0,warn:d!==null&&d>60&&d<=180};
+  }).sort((a,b)=>(a.daysLeft===null?9999:a.daysLeft)-(b.daysLeft===null?9999:b.daysLeft));
+  const bdRows=safeEmps.filter(e=>{if(!e.dob)return false;const d=new Date(e.dob);return!isNaN(d.getTime());}).map(e=>{
+    const dob=new Date(e.dob);const next=new Date(today.getFullYear(),dob.getMonth(),dob.getDate());
+    if(next<today)next.setFullYear(today.getFullYear()+1);
+    const d=Math.ceil((next-today)/86400000);
+    return{...e,daysLeft:d,nextBday:next,thisMonth:dob.getMonth()===today.getMonth()};
+  }).sort((a,b)=>a.daysLeft-b.daysLeft);
+  const lbRows=safeEmps.map(e=>{
+    const approved=safeLeaves.filter(l=>l.empId===e.id&&l.status==="Approved");
+    const alEnt=Number(e.annualLeave)||14;
+    const alUsed=approved.filter(l=>l.type==="Annual Leave").reduce((s,l)=>s+(Number(l.days)||0),0);
+    const mlUsed=approved.filter(l=>l.type==="Medical Leave").reduce((s,l)=>s+(Number(l.days)||0),0);
+    return{...e,alEnt,alUsed,alBal:alEnt-alUsed,mlUsed,mlBal:14-mlUsed};
+  }).sort((a,b)=>a.alBal-b.alBal);
+  const TABS=[{id:"workpass",label:"Work Pass"},{id:"passport",label:"Passport"},{id:"birthday",label:"Birthdays"},{id:"leaveBal",label:"Leave Balance"}];
+  function doExport(){
+    if(tab==="workpass")exportXLS(wpRows.map(e=>({ID:e.id,Name:e.name,"Work Pass":e.workPass,"WP No.":e.epSpNo||"","Expiry":fmtDate(e._exp),"Days Left":e.daysLeft})),"WorkPass","workpass.xlsx");
+    else if(tab==="birthday")exportXLS(bdRows.map(e=>({ID:e.id,Name:e.name,DOB:fmtDate(e.dob),Age:calcAge(e.dob),"Days Away":e.daysLeft,"This Month":e.thisMonth?"Yes":"No"})),"Birthdays","birthdays.xlsx");
+    else exportXLS(lbRows.map(e=>({ID:e.id,Name:e.name,Dept:e.department,"AL Entitlement":e.alEnt,"AL Used":e.alUsed,"AL Balance":e.alBal,"ML Used":e.mlUsed,"ML Balance":e.mlBal})),"LeaveBalance","leave_balance.xlsx");
+  }
+  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <PageTitle title="Tracker" actions={[<Btn v="ghost" onClick={doExport}>Export Excel</Btn>]}/>
+    <TabBar tabs={TABS} active={tab} onChange={setTab}/>
+    {tab==="workpass"&&<>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        <StatCard label="Expiring ≤30 days" value={wpRows.filter(r=>r.urgent).length} icon="!" color={C.danger}/>
+        <StatCard label="Expiring 31–90 days" value={wpRows.filter(r=>r.warn).length} icon="!" color={C.warning}/>
+        <StatCard label="OK" value={wpRows.filter(r=>!r.urgent&&!r.warn).length} icon="✓" color={C.success}/>
+      </div>
+      {wpRows.length===0&&<Card><p style={{color:C.muted,textAlign:"center",padding:24}}>No work pass expiry dates entered. Update employees' Work Pass Expiry Date field.</p></Card>}
+      <TTable cols={["Employee","Work Pass","WP No.","Expiry Date","Days Left","Alert"]}
+        rows={wpRows.map(e=><TR key={e.id}>
+          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
+          <TD><Badge s={e.workPass||"SC"}/></TD><TD style={{fontSize:12}}>{e.epSpNo||"—"}</TD>
+          <TD style={{fontSize:12}}>{fmtDate(e._exp)}</TD>
+          <TD><span style={{fontWeight:800,color:e.urgent?C.danger:e.warn?C.warning:C.success}}>{e.daysLeft===0?"TODAY":e.daysLeft!==null?e.daysLeft+"d":"—"}</span></TD>
+          <TD>{e.urgent?<Badge s="Rejected"/>:e.warn?<Badge s="Pending"/>:<Badge s="Active"/>}</TD>
+        </TR>)}/>
+    </>}
+    {tab==="passport"&&<>
+      {ppRows.length===0&&<Card><p style={{color:C.muted,textAlign:"center",padding:24}}>No passport expiry dates entered. Update employees' Passport Expiry Date field.</p></Card>}
+      <TTable cols={["Employee","Nationality","Passport No.","Expiry Date","Days Left","Alert"]}
+        rows={ppRows.map(e=><TR key={e.id}>
+          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.nationality}</div></div></div></TD>
+          <TD style={{fontSize:12}}>{e.nationality}</TD>
+          <TD style={{fontSize:12}}>{e.passportNumber||e.passportNo||"—"}</TD>
+          <TD style={{fontSize:12}}>{fmtDate(e._exp)}</TD>
+          <TD><span style={{fontWeight:800,color:e.urgent?C.danger:e.warn?C.warning:C.success}}>{e.daysLeft===0?"TODAY":e.daysLeft!==null?e.daysLeft+"d":"—"}</span></TD>
+          <TD>{e.urgent?<Badge s="Rejected"/>:e.warn?<Badge s="Pending"/>:<Badge s="Active"/>}</TD>
+        </TR>)}/>
+    </>}
+    {tab==="birthday"&&<>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        <StatCard label="This Month" value={bdRows.filter(r=>r.thisMonth).length} icon="🎂" color={C.purple}/>
+        <StatCard label="Next 7 Days" value={bdRows.filter(r=>r.daysLeft<=7).length} icon="!" color={C.orange}/>
+      </div>
+      <TTable cols={["Employee","Dept","Date of Birth","Age","Next Birthday","Days Away","This Month"]}
+        rows={bdRows.map(e=><TR key={e.id}>
+          <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
+          <TD style={{fontSize:12}}>{e.department}</TD><TD style={{fontSize:12}}>{fmtDate(e.dob)}</TD>
+          <TD style={{fontWeight:700}}>{calcAge(e.dob)}</TD>
+          <TD style={{fontSize:12}}>{e.nextBday.toLocaleDateString("en-SG",{day:"numeric",month:"long",year:"numeric"})}</TD>
+          <TD><span style={{fontWeight:800,color:e.daysLeft<=7?C.purple:C.muted}}>{e.daysLeft===0?"TODAY":e.daysLeft+"d"}</span></TD>
+          <TD>{e.thisMonth?<span style={{color:C.purple,fontWeight:700}}>🎂 This Month</span>:<span style={{color:C.muted}}>—</span>}</TD>
+        </TR>)}/>
+    </>}
+    {tab==="leaveBal"&&<TTable cols={["Employee","Dept","AL Entitlement","AL Used","AL Balance","ML Used","ML Balance"]}
+      rows={lbRows.map(e=><TR key={e.id}>
+        <TD><div style={{display:"flex",gap:8,alignItems:"center"}}><Avatar name={e.name} size={26}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:10,color:C.muted}}>{e.id}</div></div></div></TD>
+        <TD style={{fontSize:12}}>{e.department}</TD>
+        <TD style={{textAlign:"center",fontWeight:600}}>{e.alEnt}</TD>
+        <TD style={{textAlign:"center",color:C.danger,fontWeight:600}}>{e.alUsed}</TD>
+        <TD><div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,height:6,background:C.border,borderRadius:99,overflow:"hidden"}}><div style={{width:`${Math.min(100,e.alEnt>0?(e.alUsed/e.alEnt)*100:0)}%`,height:"100%",background:e.alBal<=2?C.danger:e.alBal<=5?C.warning:C.success}}/></div>
+          <span style={{fontWeight:700,color:e.alBal<=2?C.danger:e.alBal<=5?C.warning:C.success,minWidth:20,fontSize:13}}>{e.alBal}</span>
+        </div></TD>
+        <TD style={{textAlign:"center",color:C.danger,fontWeight:600}}>{e.mlUsed}</TD>
+        <TD style={{textAlign:"center",fontWeight:700,color:e.mlBal<=3?C.warning:C.success}}>{e.mlBal}</TD>
+      </TR>)}/>}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: DASHBOARD — Department summary + Alerts + Calendar
+// ═══════════════════════════════════════════════════════════════════════════════
+function AdminDashboard({employees,leaves,claims,attendance,announcements,calEvents,onNavigate,onLeaveAction,session,lang}){
+  const safeEmps=Array.isArray(employees)?employees:[];
+  const safeLeaves=Array.isArray(leaves)?leaves:[];
+  const safeCal=Array.isArray(calEvents)?calEvents:[];
+  const today=new Date();
+  const pendingLeaves=safeLeaves.filter(l=>l.status==="Pending Supervisor"||l.status==="Pending HR");
+  const pendingClaims=(Array.isArray(claims)?claims:[]).filter(c=>c.status==="Pending Supervisor"||c.status==="Pending HR");
+  // Dept breakdown
+  const depts=[...new Set(safeEmps.map(e=>e.department).filter(Boolean))].sort();
+  const deptStats=depts.map(d=>({dept:d,total:safeEmps.filter(e=>e.department===d).length,active:safeEmps.filter(e=>e.department===d&&e.status==="Active").length}));
+  // Upcoming holidays (next 60 days)
+  const upHolidays=safeCal.filter(e=>e.type==="Holiday"&&e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  // Work pass expiry ≤90 days
+  const wpAlerts=safeEmps.filter(e=>{const d=daysUntil(e.workPassExpiryDate||e.epExpiry);return d!==null&&d<=90&&d>=0;}).sort((a,b)=>(daysUntil(a.workPassExpiryDate||a.epExpiry)||999)-(daysUntil(b.workPassExpiryDate||b.epExpiry)||999));
+  // Birthdays this month
+  const bdThisMonth=safeEmps.filter(e=>e.dob&&!isNaN(new Date(e.dob))&&new Date(e.dob).getMonth()===today.getMonth());
+  return <div style={{display:"flex",flexDirection:"column",gap:18}}>
+    <div><h1 style={{fontSize:20,fontWeight:800,color:C.text,margin:0}}>Dashboard</h1><p style={{color:C.muted,margin:"3px 0 0",fontSize:13}}>{today.toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+      <StatCard label="Total Employees" value={safeEmps.length} sub={`${safeEmps.filter(e=>e.status==="Active").length} active`} icon="E" color={C.accent}/>
+      <StatCard label="Pending Approvals" value={pendingLeaves.length+pendingClaims.length} sub="leaves & claims" icon="P" color={C.warning}/>
+      <StatCard label="WP Expiring Soon" value={wpAlerts.length} sub="within 90 days" icon="!" color={C.danger}/>
+      <StatCard label="Birthdays This Month" value={bdThisMonth.length} icon="🎂" color={C.purple}/>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      {/* Department breakdown */}
+      <Card>
+        <SecTitle>Department Headcount</SecTitle>
+        {deptStats.length===0&&<p style={{color:C.muted,fontSize:13}}>No department data.</p>}
+        {deptStats.map(d=><div key={d.dept} style={{marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+            <span style={{fontSize:12,fontWeight:600}}>{d.dept}</span>
+            <span style={{fontSize:12,fontWeight:700,color:C.accent}}>{d.active}/{d.total}</span>
+          </div>
+          <div style={{height:6,background:C.border,borderRadius:99,overflow:"hidden"}}>
+            <div style={{width:`${safeEmps.length>0?(d.total/safeEmps.length)*100:0}%`,height:"100%",background:C.accent,borderRadius:99}}/>
+          </div>
+        </div>)}
+      </Card>
+      {/* Pending approvals */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <SecTitle>Pending Approvals</SecTitle>
+          <Btn v="outline" sm onClick={()=>onNavigate("leaves")}>View All</Btn>
+        </div>
+        {pendingLeaves.length===0&&pendingClaims.length===0&&<p style={{color:C.muted,fontSize:13}}>All clear — no pending items.</p>}
+        {pendingLeaves.slice(0,3).map(l=>{const emp=safeEmps.find(e=>e.id===l.empId);return <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+          <Avatar name={emp?.name||"?"} size={30}/><div style={{flex:1}}><div style={{fontWeight:600,fontSize:12}}>{emp?.name||l.empId}</div><div style={{fontSize:11,color:C.muted}}>{l.type} · {fmtDate(l.from)}</div></div>
+          <Btn v="success" sm onClick={()=>onLeaveAction(l.id,l.status==="Pending Supervisor"?"Pending HR":"Approved",session?.name||"","")}>✓</Btn>
+          <Btn v="danger" sm onClick={()=>onLeaveAction(l.id,"Rejected",session?.name||"","")}>✕</Btn>
+        </div>;})}
+      </Card>
+      {/* Work pass alerts */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <SecTitle>Work Pass Expiry Alerts</SecTitle>
+          <Btn v="outline" sm onClick={()=>onNavigate("tracker")}>View Tracker</Btn>
+        </div>
+        {wpAlerts.length===0&&<p style={{color:C.muted,fontSize:13}}>No work pass expiring within 90 days.</p>}
+        {wpAlerts.slice(0,5).map(e=>{const d=daysUntil(e.workPassExpiryDate||e.epExpiry);return <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:d<=30?C.danger:C.warning,flexShrink:0}}/>
+          <div style={{flex:1}}><span style={{fontWeight:600,fontSize:12}}>{e.name}</span><span style={{color:C.muted,fontSize:11}}> · {e.workPass}</span></div>
+          <span style={{fontSize:12,fontWeight:800,color:d<=30?C.danger:C.warning}}>{d===0?"TODAY":d+"d"}</span>
+        </div>;})}
+      </Card>
+      {/* Birthdays + Upcoming holidays */}
+      <Card>
+        <SecTitle>Birthdays This Month 🎂</SecTitle>
+        {bdThisMonth.length===0&&<p style={{color:C.muted,fontSize:12,marginBottom:12}}>No birthdays this month.</p>}
+        {bdThisMonth.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <Avatar name={e.name} size={28}/><div><div style={{fontWeight:600,fontSize:12}}>{e.name}</div><div style={{fontSize:11,color:C.purple}}>{new Date(e.dob).toLocaleDateString("en-SG",{day:"numeric",month:"short"})} · Turns {calcAge(e.dob)+1}</div></div>
+        </div>)}
+        <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+          <SecTitle>Upcoming Public Holidays</SecTitle>
+          {upHolidays.length===0&&<p style={{color:C.muted,fontSize:12}}>No upcoming holidays in calendar. Add them via Calendar page.</p>}
+          {upHolidays.map(h=><div key={h.id} style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}><span style={{fontWeight:600}}>{h.title}</span><span style={{color:C.muted}}>{fmtDate(h.date)}</span></div>)}
+        </div>
+      </Card>
+    </div>
+    {/* Latest announcements */}
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <SecTitle>Latest Announcements</SecTitle>
+        <Btn v="outline" sm onClick={()=>onNavigate("memo")}>View All</Btn>
+      </div>
+      {(Array.isArray(announcements)?announcements:[]).slice(0,3).map(a=><div key={a.id} style={{borderLeft:`3px solid ${C.accent}`,paddingLeft:10,marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:13}}>{a.title}</div>
+        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{fmtDate(a.date)} · {a.author||""}</div>
+      </div>)}
+    </Card>
+  </div>;
+}
+
+
 function Login({users,onLogin,lang,setLang}){
   const [user,setUser]=useState("");const [pass,setPass]=useState("");const [err,setErr]=useState("");
   function submit(){const found=users.find(x=>x.username.toLowerCase()===user.trim().toLowerCase()&&x.password===pass);if(!found){setErr("Invalid credentials.");return;}if(found.active===false){setErr("Account disabled. Contact admin.");return;}onLogin(found);}
@@ -1764,9 +2359,22 @@ function Login({users,onLogin,lang,setLang}){
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
-const EMP_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payslip",l:"payslip",icon:"$"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"K"},{id:"shift",l:"shift",icon:"S"}];
-const ADMIN_NAV=[{id:"dashboard",l:"dashboard",icon:"D"},{id:"employees",l:"employees",icon:"E"},{id:"projects",l:"Projects",icon:"J"},{id:"users",l:"settings",icon:"U"},{id:"attendance",l:"attendance",icon:"A"},{id:"leaves",l:"leaves",icon:"L"},{id:"claims",l:"claims",icon:"C"},{id:"payroll",l:"payroll",icon:"$"},{id:"tracker",l:"Tracker",icon:"K"},{id:"memo",l:"memo",icon:"M"},{id:"policy",l:"policy",icon:"P"},{id:"training",l:"training",icon:"T"},{id:"feedback",l:"feedback",icon:"F"},{id:"appraisal",l:"appraisal",icon:"R"},{id:"calendar",l:"calendar",icon:"C"},{id:"shift",l:"shift",icon:"S"}];
+const EMP_NAV=[{id:"dashboard",l:"dashboard",icon:"🏠"},{id:"attendance",l:"attendance",icon:"📍"},{id:"leaves",l:"leaves",icon:"🌴"},{id:"claims",l:"claims",icon:"💵"},{id:"benefits",l:"Benefits",icon:"💊"},{id:"payslip",l:"payslip",icon:"💰"},{id:"memo",l:"memo",icon:"📢"},{id:"policy",l:"policy",icon:"📋"},{id:"training",l:"training",icon:"🎓"},{id:"feedback",l:"feedback",icon:"💬"},{id:"appraisal",l:"appraisal",icon:"⭐"},{id:"calendar",l:"calendar",icon:"📅"},{id:"shift",l:"shift",icon:"🕐"}];
+const ADMIN_NAV=[{id:"dashboard",l:"dashboard",icon:"🏠"},{id:"employees",l:"employees",icon:"👥"},{id:"projects",l:"Projects",icon:"🏗️"},{id:"users",l:"settings",icon:"🔑"},{id:"attendance",l:"attendance",icon:"📍"},{id:"leaves",l:"leaves",icon:"🌴"},{id:"claims",l:"claims",icon:"💵"},{id:"benefits",l:"Benefits",icon:"💊"},{id:"payroll",l:"payroll",icon:"💰"},{id:"tracker",l:"Tracker",icon:"📊"},{id:"memo",l:"memo",icon:"📢"},{id:"policy",l:"policy",icon:"📋"},{id:"training",l:"training",icon:"🎓"},{id:"feedback",l:"feedback",icon:"💬"},{id:"appraisal",l:"appraisal",icon:"⭐"},{id:"calendar",l:"calendar",icon:"📅"},{id:"shift",l:"shift",icon:"🕐"}];
 
+
+// ─── SETTINGS HUB ────────────────────────────────────────────────────────────
+function SettingsHub({users,employees,onAddUser,onEditUser,onDeleteUser,onResetPw,empFieldConfig,onUpdateFieldConfig,allowanceTypes,onUpdateAllowanceTypes,lang}){
+  const [tab,setTab]=useState("users");
+  const TABS=[{id:"users",label:"👤 User Accounts"},{id:"fields",label:"🗂️ Employee Fields"},{id:"allowances",label:"💰 Allowance Types"}];
+  return<div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <PageTitle title="⚙️ Settings"/>
+    <TabBar tabs={TABS} active={tab} onChange={setTab}/>
+    {tab==="users"&&<Card><UserMgmt users={users} employees={employees} onAdd={onAddUser} onEdit={onEditUser} onDelete={onDeleteUser} onResetPw={onResetPw} lang={lang}/></Card>}
+    {tab==="fields"&&<Card><FieldConfigManager fieldConfig={empFieldConfig} onUpdate={onUpdateFieldConfig}/></Card>}
+    {tab==="allowances"&&<Card><AllowanceTypeManager allowanceTypes={allowanceTypes} onUpdate={onUpdateAllowanceTypes}/></Card>}
+  </div>;
+}
 
 export default function App(){
   const [session,setSession]=useState(null);
@@ -1774,8 +2382,12 @@ export default function App(){
   const [page,setPage]=useState("dashboard");
   const [toast,setToast]=useState(null);
   const [loading,setLoading]=useState(true);
-  const [projects,setProjects]=useState(INIT_PROJECTS);
+  const [projects,setProjects]=useState(INIT_PROJECTS_DATA);
   const [company,setCompany]=useState(INIT_COMPANY);
+  const [benefitTypes,setBenefitTypes]=useState(INIT_BENEFIT_TYPES);
+  const [benefitClaims,setBenefitClaims]=useState([]);
+  const [allowanceTypes,setAllowanceTypes]=useState(INIT_ALLOWANCE_TYPES);
+  const [empFieldConfig,setEmpFieldConfig]=useState(INIT_EMP_FIELD_CONFIG);
 
   // ── Data states (populated by Firestore real-time listeners) ──────────────
   const [employees,setEmployees]=useState([]);
@@ -1856,6 +2468,10 @@ export default function App(){
       onSnapshot(collection(db,'calEvents'),s=>setCalEvents(snap2arr(s))),
       onSnapshot(collection(db,'projects'),s=>{const d=snap2arr(s);if(d.length)setProjects(d);}),
       onSnapshot(collection(db,'company'),s=>{const d=snap2arr(s);if(d.length)setCompany(d[0]);}),
+      onSnapshot(collection(db,'benefitTypes'),s=>{const d=snap2arr(s);if(d.length)setBenefitTypes(d);}),
+      onSnapshot(collection(db,'benefitClaims'),s=>setBenefitClaims(snap2arr(s))),
+      onSnapshot(collection(db,'allowanceTypes'),s=>{const d=snap2arr(s);if(d.length)setAllowanceTypes(d);}),
+      onSnapshot(collection(db,'empFieldConfig'),s=>{const d=snap2arr(s);if(d.length)setEmpFieldConfig(d);}),
     ];
     return()=>subs.forEach(u=>u());
   },[]);
@@ -1980,6 +2596,14 @@ export default function App(){
 
   // ── CALENDAR ──────────────────────────────────────────────────────────────
   function addCalEvent(d){fsAddId('calEvents',d);toast_("Event added.");}
+  // Benefits
+  function addBenefitType(d){fsSet('benefitTypes',d.id||"bt"+uid(),d);toast_("Benefit type added.");}
+  function editBenefitType(id,d){fsUp('benefitTypes',id,d);toast_("Updated.");}
+  function addBenefitClaim(d){fsAddId('benefitClaims',{...d});toast_("Claim submitted.");}
+  function approveBenefitClaim(id){fsUp('benefitClaims',id,{status:"Approved"});toast_("Claim approved.");}
+  function rejectBenefitClaim(id){fsUp('benefitClaims',id,{status:"Rejected"});toast_("Claim rejected.","error");}
+  function updateAllowanceTypes(d){d.forEach(a=>fsSet('allowanceTypes',a.id,a));toast_("Allowance types updated.");}
+  function updateEmpFieldConfig(d){d.forEach((sec,i)=>fsSet('empFieldConfig',`sec_${i}`,sec));toast_("Field config updated.");}
   function addProject(d){fsAddId('projects',{...d,id:""}).then(()=>toast_("Project added."));}
   function editProject(id,d){fsUp('projects',id,d);toast_("Project updated.");}
   function delProject(id){fsDel('projects',id);toast_("Deleted.","error");}
@@ -2002,13 +2626,14 @@ export default function App(){
         case "appraisal":return <EmpAppraisal forms={appraisalForms} submissions={appraisalSubs} empId={empId} onSave={saveAppraisalSub} lang={lang}/>;
         case "calendar":return <EmpCalendar events={calEvents} leaves={leaves} employees={employees} empId={empId} lang={lang}/>;
         case "shift":return <EmpShift shifts={shifts} empId={empId} lang={lang}/>;
+        case "benefits":return <EmpBenefits empId={empId} benefitTypes={benefitTypes} benefitClaims={benefitClaims} onAdd={addBenefitClaim} lang={lang}/>;
         default:return null;
       }
     }
     switch(page){
-      case "dashboard":return <AdminDashboard employees={employees} leaves={leaves} claims={claims} attendance={attendance} announcements={memos} onNavigate={setPage} onLeaveAction={leaveAction} session={session} lang={lang}/>;
+      case "dashboard":return <AdminDashboard employees={employees} leaves={leaves} claims={claims} attendance={attendance} announcements={memos} calEvents={calEvents} onNavigate={setPage} onLeaveAction={leaveAction} session={session} lang={lang}/>;
       case "employees":return <EmpList employees={employees} leaves={leaves} onAdd={addEmp} onEdit={editEmp} onDelete={delEmp} lang={lang}/>;
-      case "users":return <UserMgmt users={users} employees={employees} onAdd={addUser} onEdit={editUser} onDelete={delUser} onResetPw={resetPw} lang={lang}/>;
+      case "users":return <SettingsHub users={users} employees={employees} onAddUser={addUser} onEditUser={editUser} onDeleteUser={delUser} onResetPw={resetPw} empFieldConfig={empFieldConfig} onUpdateFieldConfig={updateEmpFieldConfig} allowanceTypes={allowanceTypes} onUpdateAllowanceTypes={updateAllowanceTypes} lang={lang}/>;
       case "attendance":return <AdminAttendance attendance={attendance} employees={employees} onAdd={clockAction} onEdit={(id,d)=>{const ex=attendance.find(a=>a.id===id);if(ex)clockAction({...ex,...d,id});}} onDelete={id=>{fsDel("attendance",id);toast_("Deleted.","error");}} lang={lang}/>;
       case "leaves":return <AdminLeave leaves={leaves} employees={employees} leaveTypes={leaveTypes} users={users} onAction={leaveAction} onAdd={addLeave} onDelete={delLeave} onAddType={addLT} onEditType={editLT} onDeleteType={delLT} session={session} lang={lang}/>;
       case "claims":return <AdminClaims claims={claims} employees={employees} users={users} session={session} onAction={claimAction} onDelete={delClaim} lang={lang}/>;
@@ -2020,6 +2645,7 @@ export default function App(){
       case "appraisal":return <AdminAppraisal forms={appraisalForms} submissions={appraisalSubs} employees={employees} onAddForm={addAppraisalForm} onEditForm={editAppraisalForm} onDeleteForm={delAppraisalForm} onSaveSubmission={saveAppraisalSub} session={session} lang={lang}/>;
       case "calendar":return <AdminCalendar events={calEvents} leaves={leaves} employees={employees} onAdd={addCalEvent} onEdit={editCalEvent} onDelete={delCalEvent} session={session} lang={lang}/>;
       case "shift":return <AdminShift shifts={shifts} employees={employees} onAdd={addShift} onEdit={editShift} onDelete={delShift} lang={lang}/>
+      case "benefits":return <AdminBenefits benefitTypes={benefitTypes} benefitClaims={benefitClaims} employees={employees} onAddType={addBenefitType} onEditType={editBenefitType} onDeleteType={id=>fsDel("benefitTypes",id)} onApprove={approveBenefitClaim} onReject={rejectBenefitClaim} lang={lang}/>
       case "projects":return <AdminProjects projects={projects} employees={employees} onAdd={addProject} onEdit={editProject} onDelete={delProject} lang={lang}/>
       case "tracker":return <AdminTracker employees={employees} leaves={leaves} leaveTypes={leaveTypes} lang={lang}/>;
       default:return null;
@@ -2028,11 +2654,12 @@ export default function App(){
 
   // ── LAYOUT ────────────────────────────────────────────────────────────────
   return(
+    <ErrorBoundary>
     <div style={{display:"flex",height:"100vh",fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,overflow:"hidden"}}>
       <aside style={{width:190,background:C.sidebar,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"}}>
         <div style={{padding:"16px 14px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:32,height:32,background:C.accent,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0}}>C.HR</div>
+            <div style={{width:34,height:34,background:`linear-gradient(135deg,${C.accent},${C.purple})`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:"#fff",flexShrink:0,boxShadow:"0 4px 12px rgba(99,102,241,0.4)"}}>C·HR</div>
             <div><div style={{color:"#fff",fontWeight:800,fontSize:13,lineHeight:1.1}}>Custera<span style={{color:"#60A5FA"}}>.HR</span></div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,marginTop:1}}>SG Construction</div></div>
           </div>
           <div style={{display:"flex",gap:4,marginTop:10}}>
@@ -2062,7 +2689,7 @@ export default function App(){
       <main style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>{renderPage()}</main>
       {toast&&<Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
       {showMemoPopup&&<MemoPopup memos={memos} empId={empId} lang={lang} onRead={readMemo} onClose={()=>readMemo(unreadMemos[0].id)}/>}
-    </div>
+    </div></ErrorBoundary>
   );
 }
 
